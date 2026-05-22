@@ -217,6 +217,12 @@ function Install-Hooks {
         'SessionStart' = @(
             (New-HookEntry 'SessionStart' '')
         )
+        'PreCompact' = @(
+            (New-HookEntry 'PreCompact' '')
+        )
+        'PostCompact' = @(
+            (New-HookEntry 'PostCompact' '')
+        )
     }
 
     $added = @()

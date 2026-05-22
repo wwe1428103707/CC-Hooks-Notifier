@@ -45,6 +45,8 @@ internal static class HookMode
             "TaskCompleted"      => HandleTaskCompleted(data),
             "SessionEnd"         => HandleSessionEnd(data),
             "SessionStart"       => HandleSessionStart(data),
+            "PreCompact"         => HandlePreCompact(data),
+            "PostCompact"        => HandlePostCompact(data),
             _                    => HandleDefault(data)
         };
     }
@@ -340,6 +342,26 @@ internal static class HookMode
                 TrySendStateful("SessionStart", eventType, $"Session: {eventType}");
                 break;
         }
+        return 0;
+    }
+
+    // ── PreCompact event (stateful only) ──────────────────────────────
+    private static int HandlePreCompact(HookData data)
+    {
+        var eventType = data.HookEventType ?? "auto";
+        TrySendStateful("PreCompact", eventType, $"Compacting context...");
+        return 0;
+    }
+
+    // ── PostCompact event (toast) ─────────────────────────────────────
+    private static int HandlePostCompact(HookData data)
+    {
+        var eventType = data.HookEventType ?? "auto";
+        var title = "Claude Code";
+        var body = "Context compaction complete";
+        if (TrySendIpc(null, title, body, "none", "PostCompact"))
+            return 0;
+        ToastService.Show(title, body);
         return 0;
     }
 
