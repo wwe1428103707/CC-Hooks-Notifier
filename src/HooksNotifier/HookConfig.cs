@@ -93,7 +93,7 @@ internal static class HookConfig
             var cmdValue = $"\"{exe}\"";
 
             using var stream = new MemoryStream();
-            using var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true });
+            using var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
 
             writer.WriteStartObject();
             bool hooksWritten = false;
@@ -199,7 +199,7 @@ internal static class HookConfig
             var json = File.ReadAllText(path);
             using var doc = JsonDocument.Parse(json);
             using var stream = new MemoryStream();
-            using var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true });
+            using var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
 
             writer.WriteStartObject();
             foreach (var prop in doc.RootElement.EnumerateObject())
