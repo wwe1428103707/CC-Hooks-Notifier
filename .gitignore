@@ -1,0 +1,27 @@
+# .NET build intermediates
+src/**/bin/
+src/**/obj/
+src/**/Debug/
+src/**/Release/
+
+# NuGet
+.nuget/
+packages/
+
+# Build outputs
+bin/
+ClaudeCodeHooksNotifier-Setup.exe
+
+# IDE
+.vs/
+.vscode/
+*.suo
+*.sln.docstates
+*.user
+
+# Logs
+*.log
+notify_error.log
+
+# Temp files
+*.tmp
