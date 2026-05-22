@@ -28,6 +28,14 @@ internal static class TrayMode
     private static string _lastAgentType = "";
     private static string _lastTaskDesc = "";
 
+    /// <summary>Total subagent starts (for dashboard).</summary>
+    public static int SubagentCount => _subagentCount;
+    /// <summary>Total task creations (for dashboard).</summary>
+    public static int TaskCount => _taskCount;
+
+    // ── Dashboard window ──────────────────────────────────────────────
+    private static MainWindow? _mainWindow;
+
     // ── Dynamic menu items (updated on each stateful message) ────────
     private static ToolStripMenuItem? _statusCountItem;
     private static ToolStripMenuItem? _statusSubagentItem;
@@ -59,7 +67,19 @@ internal static class TrayMode
             if (e.Button == MouseButtons.Left)
                 StopBlinking();
         };
-        _trayIcon.DoubleClick += (_, _) => OpenSettings();
+        _trayIcon.DoubleClick += (_, _) =>
+        {
+            StopBlinking();
+            if (_mainWindow == null || _mainWindow.IsDisposed)
+            {
+                _mainWindow = new MainWindow();
+                _mainWindow.Show();
+            }
+            else
+            {
+                _mainWindow.Activate();
+            }
+        };
 
         // ── Blink timer ──────────────────────────────────────────────
         _blinkTimer = new System.Windows.Forms.Timer();
@@ -90,14 +110,26 @@ internal static class TrayMode
             {
                 case "toast":
                     ToastService.Show(msg.Title, msg.Body);
+                    var level = msg.BlinkType switch
+                    {
+                        "long"  => "P0",
+                        "short" => "P0.5",
+                        _       => "Toast"
+                    };
                     var ticks = msg.BlinkType switch
                     {
-                        "long"  => 20,  // P0: 10 seconds
-                        "short" => 10,  // P0.5: 5 seconds
-                        _       => 0    // no blink
+                        "long"  => 20,
+                        "short" => 10,
+                        _       => 0
                     };
                     if (ticks > 0)
                         StartBlinking(ticks);
+
+                    // Record event history
+                    var entry = new EventEntry(DateTime.Now, level, msg.EventName,
+                        string.IsNullOrEmpty(msg.Body) ? msg.Title : msg.Body);
+                    EventHistory.Add(entry);
+                    _mainWindow?.PushEvent(entry);
                     break;
 
                 case "stateful":
@@ -115,6 +147,11 @@ internal static class TrayMode
                             _lastTaskDesc = msg.EventType;
                             break;
                     }
+                    // Record stateful events
+                    var sfx = new EventEntry(DateTime.Now, "Stateful", msg.EventName,
+                        string.IsNullOrEmpty(msg.Title) ? $"{msg.EventName}: {msg.EventType}" : msg.Title);
+                    EventHistory.Add(sfx);
+                    _mainWindow?.PushEvent(sfx);
                     UpdateStatusMenu();
                     break;
             }
