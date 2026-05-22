@@ -2,7 +2,7 @@
 ; Compile: ISCC.exe setup.iss
 
 #define MyAppName "Claude Code Hooks Notifier"
-#define MyAppVersion "1.5.2"
+#define MyAppVersion "1.5.3"
 #define MyAppPublisher "Claude Code Hooks Notifier"
 #define MyAppExeName "hooks-notifier.exe"
 
