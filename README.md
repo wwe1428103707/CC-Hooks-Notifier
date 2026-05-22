@@ -156,6 +156,12 @@ The tray icon context menu includes a "Dashboard" option that opens a WebView2 w
 └── publish.ps1                # Build helper
 ```
 
+## Contributors
+
+Thanks to the following people who have contributed to this project:
+
+- [@wwe1428103707](https://github.com/wwe1428103707) — project creator and maintainer
+
 ## License
 
 MIT
