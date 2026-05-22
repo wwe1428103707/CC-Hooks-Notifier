@@ -179,6 +179,10 @@ function Install-Hooks {
         )
         'Notification' = @(
             (New-HookEntry 'Notification' 'idle_prompt')
+            (New-HookEntry 'Notification' 'permission_prompt')
+            (New-HookEntry 'Notification' 'auth_success')
+            (New-HookEntry 'Notification' 'elicitation_dialog')
+            (New-HookEntry 'Notification' 'elicitation_complete')
         )
     }
 

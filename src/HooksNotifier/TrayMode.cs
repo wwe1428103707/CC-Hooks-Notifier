@@ -12,11 +12,12 @@ internal static class TrayMode
 {
     private const string MutexName = "ClaudeCodeHooksTray";
     private const int BlinkIntervalMs = 500;
-    private const int MaxBlinkTicks = 20;
+    private const int DefaultBlinkTicks = 20;
 
     private static NotifyIcon? _trayIcon;
     private static System.Windows.Forms.Timer? _blinkTimer;
     private static int _blinkTick;
+    private static int _maxBlinkTicks = DefaultBlinkTicks;
     private static bool _isHighlighted;
     private static CancellationTokenSource? _cts;
     private static SynchronizationContext? _uiContext;
@@ -56,7 +57,7 @@ internal static class TrayMode
             _isHighlighted = !_isHighlighted;
             _trayIcon.Icon = _isHighlighted ? IconHelper.Highlighted : IconHelper.Normal;
             _blinkTick++;
-            if (_blinkTick >= MaxBlinkTicks)
+            if (_blinkTick >= _maxBlinkTicks)
                 StopBlinking();
         };
 
@@ -68,7 +69,6 @@ internal static class TrayMode
     }
 
     // ── IPC message handler (called from background thread) ──────────
-    // All WinForms/NotifyIcon calls are dispatched to the UI thread.
     private static void OnIpcMessage(IpcMessage msg)
     {
         if (_uiContext == null) return;
@@ -79,17 +79,24 @@ internal static class TrayMode
             {
                 case "toast":
                     ToastService.Show(msg.Title, msg.Body);
-                    if (msg.Blink)
-                        StartBlinking();
+                    var ticks = msg.BlinkType switch
+                    {
+                        "long"  => 20,  // P0: 10 seconds
+                        "short" => 10,  // P0.5: 5 seconds
+                        _       => 0    // no blink
+                    };
+                    if (ticks > 0)
+                        StartBlinking(ticks);
                     break;
             }
         }, null);
     }
 
     // ── Blinking (UI thread only) ────────────────────────────────────
-    private static void StartBlinking()
+    private static void StartBlinking(int maxTicks = 20)
     {
         _blinkTick = 0;
+        _maxBlinkTicks = maxTicks;
         _isHighlighted = false;
         _blinkTimer?.Start();
     }

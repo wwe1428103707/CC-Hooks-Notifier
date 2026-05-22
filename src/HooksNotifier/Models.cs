@@ -81,8 +81,9 @@ internal sealed record IpcMessage
     [JsonPropertyName("subType")]
     public string SubType { get; init; } = "";
 
-    [JsonPropertyName("blink")]
-    public bool Blink { get; init; } = true;
+    /// <summary>Blink behavior: "none" (toast only), "short" (5s, P0.5), "long" (10s, P0).</summary>
+    [JsonPropertyName("blinkType")]
+    public string BlinkType { get; init; } = "none";
 }
 
 internal sealed record IpcResponse
