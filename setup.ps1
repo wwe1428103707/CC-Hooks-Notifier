@@ -214,6 +214,9 @@ function Install-Hooks {
         'SessionEnd' = @(
             (New-HookEntry 'SessionEnd' '')
         )
+        'SessionStart' = @(
+            (New-HookEntry 'SessionStart' '')
+        )
     }
 
     $added = @()
