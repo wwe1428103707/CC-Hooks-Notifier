@@ -38,15 +38,30 @@ cd ..\..\webui && npm run build
 grep -rn '1\.4\.0\|1\.5\.0\|1\.3\.0\|1\.2\.0' --include="*.cs" --include="*.ts" --include="*.tsx" --exclude-dir=node_modules --exclude-dir=obj --exclude-dir=bin .
 ```
 
-## Build
+## Build & Package
+
+### Full release build (all components)
 
 ```powershell
-# 1. Build C# project
-cd src\HooksNotifier && dotnet publish --configuration Release --output ..\..\bin --self-contained false
+# 1. Build React UI
+cd webui && npm run build && cd ..
 
-# 2. Build installer
-cd ..\.. && "%LocalAppData%\Programs\Inno Setup 6\ISCC.exe" setup.iss
+# 2. Build hooks-notify (lightweight hook handler)
+dotnet publish src\NotifyHook\NotifyHook.csproj --configuration Release --output bin --self-contained false
+
+# 3. Build hooks-notifier (tray + dashboard)
+dotnet publish src\HooksNotifier\HooksNotifier.csproj --configuration Release --output bin --self-contained false
+
+# 4. Build installer
+"%LocalAppData%\Programs\Inno Setup 6\ISCC.exe" setup.iss
 ```
+
+### Version bump checklist (every release)
+
+1. Update version in all 5 files listed above
+2. Run full release build
+3. Verify no stale versions: `grep -rn 'old.version' --include="*.cs" --include="*.ts" --include="*.tsx" --exclude-dir=node_modules --exclude-dir=obj --exclude-dir=bin .`
+4. Git commit with message: `chore: bump version to x.y.z and rebuild installer`
 
 ## Key Modes
 
