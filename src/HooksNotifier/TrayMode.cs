@@ -140,17 +140,17 @@ internal static class TrayMode
     private static void UpdateStatusMenu()
     {
         if (_statusCountItem != null)
-            _statusCountItem.Text = $"Notifications: {_taskCount + _subagentCount}";
+            _statusCountItem.Text = I18n.Get("menu.notifications", (_taskCount + _subagentCount).ToString());
 
         if (_statusSubagentItem != null)
             _statusSubagentItem.Text = string.IsNullOrEmpty(_lastAgentType)
-                ? "Subagent: IDLE"
-                : $"Subagent: {_lastAgentType}";
+                ? I18n.Get("menu.subagent_idle")
+                : I18n.Get("menu.subagent", _lastAgentType);
 
         if (_statusTaskItem != null)
             _statusTaskItem.Text = string.IsNullOrEmpty(_lastTaskDesc)
-                ? "Task: IDLE"
-                : $"Task: {_lastTaskDesc}";
+                ? I18n.Get("menu.task_idle")
+                : I18n.Get("menu.task", _lastTaskDesc);
     }
 
     // ── Context menu ─────────────────────────────────────────────────
@@ -158,42 +158,62 @@ internal static class TrayMode
     {
         var menu = new ContextMenuStrip();
 
-        menu.Items.Add(new ToolStripMenuItem("Hooks Notifier — running") { Enabled = false });
+        menu.Items.Add(new ToolStripMenuItem(I18n.Get("menu.running")) { Enabled = false });
 
         // Dynamic status section
-        _statusCountItem = new ToolStripMenuItem("Notifications: 0") { Enabled = false };
-        _statusSubagentItem = new ToolStripMenuItem("Subagent: IDLE") { Enabled = false };
-        _statusTaskItem = new ToolStripMenuItem("Task: IDLE") { Enabled = false };
+        _statusCountItem = new ToolStripMenuItem(I18n.Get("menu.notifications", "0")) { Enabled = false };
+        _statusSubagentItem = new ToolStripMenuItem(I18n.Get("menu.subagent_idle")) { Enabled = false };
+        _statusTaskItem = new ToolStripMenuItem(I18n.Get("menu.task_idle")) { Enabled = false };
         menu.Items.Add(_statusCountItem);
         menu.Items.Add(_statusSubagentItem);
         menu.Items.Add(_statusTaskItem);
 
         menu.Items.Add(new ToolStripSeparator());
 
-        var configItem = new ToolStripMenuItem("Configure Hooks");
+        var configItem = new ToolStripMenuItem(I18n.Get("menu.configure_hooks"));
         configItem.Click += (_, _) => OpenSettings();
         menu.Items.Add(configItem);
 
-        var updatePathItem = new ToolStripMenuItem("Update Hook Path");
+        var updatePathItem = new ToolStripMenuItem(I18n.Get("menu.update_hook_path"));
         updatePathItem.Click += (_, _) => AutoConfigureHooks();
         menu.Items.Add(updatePathItem);
 
-        var clearItem = new ToolStripMenuItem("Clear counters");
+        var clearItem = new ToolStripMenuItem(I18n.Get("menu.clear_counters"));
         clearItem.Click += (_, _) => { _subagentCount = 0; _taskCount = 0; _lastAgentType = ""; _lastTaskDesc = ""; UpdateStatusMenu(); };
         menu.Items.Add(clearItem);
 
-        var autoStartItem = new ToolStripMenuItem("Open at Login") { CheckOnClick = true };
+        // Language submenu
+        var langItem = new ToolStripMenuItem(I18n.Get("menu.language"));
+        foreach (var code in I18n.AvailableLanguages)
+        {
+            var langName = code == "en" ? "English" : "中文";
+            var sub = new ToolStripMenuItem(langName)
+            {
+                Checked = code == I18n.CurrentLanguage,
+                CheckState = code == I18n.CurrentLanguage ? CheckState.Checked : CheckState.Unchecked
+            };
+            var captured = code;
+            sub.Click += (_, _) =>
+            {
+                I18n.SetLanguage(captured);
+                RebuildMenu();
+            };
+            langItem.DropDownItems.Add(sub);
+        }
+        menu.Items.Add(langItem);
+
+        var autoStartItem = new ToolStripMenuItem(I18n.Get("menu.open_at_login")) { CheckOnClick = true };
         autoStartItem.Checked = IsAutoStartEnabled();
         autoStartItem.CheckedChanged += (_, _) => ToggleAutoStart(autoStartItem.Checked);
         menu.Items.Add(autoStartItem);
 
-        var aboutItem = new ToolStripMenuItem("About...");
+        var aboutItem = new ToolStripMenuItem(I18n.Get("menu.about"));
         aboutItem.Click += (_, _) => ShowAbout();
         menu.Items.Add(aboutItem);
 
         menu.Items.Add(new ToolStripSeparator());
 
-        var exitItem = new ToolStripMenuItem("Exit");
+        var exitItem = new ToolStripMenuItem(I18n.Get("menu.exit"));
         exitItem.Click += (_, _) => Shutdown();
         menu.Items.Add(exitItem);
 
@@ -212,14 +232,22 @@ internal static class TrayMode
         if (File.Exists(path))
             Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
         else
-            ToastService.ShowBalloon("Settings not found", path);
+            ToastService.ShowBalloon(I18n.Get("settings.not_found"), path);
     }
 
     private static void ShowAbout()
     {
         ToastService.ShowBalloon(
-            "Claude Code Hooks Notifier",
-            "v1.0.0\nBell icon tray + toast notifications");
+            I18n.Get("about.title"),
+            I18n.Get("about.version", "1.3.0"));
+    }
+
+    /// <summary>Rebuild the entire menu after language switch.</summary>
+    private static void RebuildMenu()
+    {
+        if (_trayIcon == null) return;
+        _trayIcon.ContextMenuStrip = BuildMenu();
+        UpdateStatusMenu();
     }
 
     // ── Auto-start ───────────────────────────────────────────────────
@@ -272,7 +300,7 @@ internal static class TrayMode
 
             if (proc.ExitCode == 0)
             {
-                ToastService.ShowBalloon("Hook path updated",
+                ToastService.ShowBalloon(I18n.Get("setup.updated", "0", ""),
                     error?.Replace("ERROR:", "")?.Trim() ?? "Done");
             }
             else
