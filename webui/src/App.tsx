@@ -124,14 +124,8 @@ function EventLog({ state }: { state: AppState }) {
 // ── Settings ───────────────────────────────────────────────────────
 function Settings({ state, onSetLang, onUpdatePath, onOpenSettings }:
   { state: AppState; onSetLang: (code: string) => void; onUpdatePath: () => void; onOpenSettings: () => void }) {
-  const fb = state._feedback
   return (
     <div className="p-6 space-y-4 max-w-xl">
-      {fb && (
-        <div className={`px-4 py-2 rounded-md text-sm font-medium ${fb.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-          {fb.success ? '✅ ' : '❌ '}{fb.message}
-        </div>
-      )}
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm">{t("settings.language")}</CardTitle></CardHeader>
         <CardContent>
@@ -156,6 +150,11 @@ function Settings({ state, onSetLang, onUpdatePath, onOpenSettings }:
         <CardContent className="space-y-2">
           <p className="text-xs font-mono text-muted-foreground break-all">{t("settings.hook_path_placeholder")}</p>
           <Button variant="outline" size="sm" onClick={onUpdatePath}>{t("settings.update_path")}</Button>
+          {state._feedback && (
+            <div className={`mt-2 px-3 py-2 rounded text-xs font-medium ${state._feedback.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+              {state._feedback.success ? '✅ ' : '❌ '}{state._feedback.message}
+            </div>
+          )}
         </CardContent>
       </Card>
       <Card>
