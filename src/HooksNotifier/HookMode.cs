@@ -44,6 +44,7 @@ internal static class HookMode
             "Stop"               => HandleStop(data),
             "TaskCompleted"      => HandleTaskCompleted(data),
             "SessionEnd"         => HandleSessionEnd(data),
+            "SessionStart"       => HandleSessionStart(data),
             _                    => HandleDefault(data)
         };
     }
@@ -316,6 +317,29 @@ internal static class HookMode
         if (TrySendIpc(null, title, body, blinkType, "SessionEnd"))
             return 0;
         ToastService.Show(title, body);
+        return 0;
+    }
+
+    // ── SessionStart event ─────────────────────────────────────────────
+    private static int HandleSessionStart(HookData data)
+    {
+        var eventType = data.HookEventType ?? "";
+
+        switch (eventType)
+        {
+            case "startup":
+            case "resume":
+                var title = "Claude Code";
+                var body = eventType == "startup" ? "Session started" : "Session resumed";
+                if (!TrySendIpc(null, title, body, "none", "SessionStart"))
+                    ToastService.Show(title, body);
+                break;
+
+            default:
+                // clear/compact — silent stateful update only
+                TrySendStateful("SessionStart", eventType, $"Session: {eventType}");
+                break;
+        }
         return 0;
     }
 

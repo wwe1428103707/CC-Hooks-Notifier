@@ -129,3 +129,84 @@ echo '{"hook_event_name":"TaskCompleted","hook_event_subtype":"Implement login"}
    feat(step-N): description
    ```
 7. Merge to `main`
+
+---
+
+# Development Plan — Hooks Notifier v1.3.0 (P2)
+
+## Overview
+
+Complete remaining P2 hook events coverage: SessionStart, PreCompact/PostCompact, ConfigChange.
+
+| Event | Priority | Type | Description |
+|-------|----------|------|-------------|
+| `SessionStart` | P2 📢 | Toast | Session started/resumed |
+| `PreCompact` | P2 🟢 | stateful | Context compaction beginning |
+| `PostCompact` | P2 📢 | Toast | Context compaction completed |
+| `ConfigChange` | P2 📢 | Toast | Config file modified externally |
+
+## Branch Strategy
+
+```
+master        v1.2.0 ─── step-8 ─── step-9 ─── step-10 ─── v1.3.0
+                            │
+feature/                  ├── step-8-sessionstart
+p2-coverage               ├── step-9-compact
+                          └── step-10-configchange
+```
+
+## Steps
+
+### Step 8 — SessionStart
+
+**Branch:** `feature/step-8-sessionstart`
+
+| File | Change |
+|------|--------|
+| `HookMode.cs` | Add `HandleSessionStart()` — show Toast on `startup`/`resume`, stateful update only for `compact`/`clear` |
+| `setup.ps1` | Register `SessionStart(” ”)` |
+
+**Notification mapping:**
+
+| event_type | Level | Behavior |
+|------------|-------|----------|
+| `startup` | 📢 Toast | "Session started" |
+| `resume` | 📢 Toast | "Session resumed" |
+| `clear` | 🟢 stateful | Silent counter update |
+| `compact` | 🟢 stateful | Silent counter update |
+
+### Step 9 — PreCompact / PostCompact
+
+**Branch:** `feature/step-9-compact`
+
+| File | Change |
+|------|--------|
+| `HookMode.cs` | Add `HandlePreCompact()` — stateful only ("Compacting context..."), add `HandlePostCompact()` — 📢 Toast ("Context compaction complete") |
+| `TrayMode.cs` | Add compact state tracking field |
+| `setup.ps1` | Register `PreCompact(” ”)`, `PostCompact(” ”)` |
+
+### Step 10 — ConfigChange
+
+**Branch:** `feature/step-10-configchange`
+
+| File | Change |
+|------|--------|
+| `HookMode.cs` | Add `HandleConfigChange()` — 📢 Toast with file path and change source |
+| `setup.ps1` | Register `ConfigChange(” ”)` |
+
+**Notification mapping:**
+
+| source | Level | Message |
+|--------|-------|---------|
+| `user_settings` | 📢 | "User settings modified" |
+| `project_settings` | 📢 | "Project settings modified" |
+| `local_settings` | 📢 | "Local settings modified" |
+| `policy_settings` | 📢 | "Policy settings modified" |
+| `skills` | 📢 | "Skills configuration changed" |
+
+## Version
+
+| Step | Version | Type | Reason |
+|------|---------|------|--------|
+| Initial | 1.2.0 | baseline | v1.2.0 complete |
+| Step 8-10 | 1.3.0 | minor | New hook event coverage |
