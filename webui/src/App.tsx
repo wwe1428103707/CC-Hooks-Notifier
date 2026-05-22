@@ -244,7 +244,7 @@ function About() {
           <span className="text-4xl">⚡</span>
           <div>
             <h2 className="text-xl font-bold">Claude Code Hooks Notifier</h2>
-            <p className="text-sm text-muted-foreground">{t("about.version", "1.4.0")}</p>
+            <p className="text-sm text-muted-foreground">{t("about.version", "1.5.0")}</p>
           </div>
         </div>
         <p className="text-sm text-muted-foreground">{t("about.tech_stack")}</p>
