@@ -28,8 +28,76 @@ function sendToCs(msg: object) {
   if (isWebView) (window as any).chrome.webview.postMessage(JSON.stringify(msg))
 }
 
+// ── Hook Toggle component ─────────────────────────────────────────
+function HookToggle({ label, level, enabled, onChange }: { label: string; level: string; enabled: boolean; onChange: (v: boolean) => void }) {
+  const hookLevels = [
+    { prefix: "P0", color: "text-red-600" },
+    { prefix: "P0.5", color: "text-orange-500" },
+    { prefix: "P1", color: "text-blue-600" },
+    { prefix: "P2", color: "text-muted-foreground" },
+  ]
+  const lvl = hookLevels.find(h => level.startsWith(h.prefix))
+  return (
+    <div className="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-0">
+      <div className="flex items-center gap-2 text-xs">
+        <span className={`${lvl?.color || "text-muted-foreground"} font-mono w-12 shrink-0`}>{level}</span>
+        <span className="text-foreground">{label}</span>
+      </div>
+      <div className={`w-9 h-5 rounded-full cursor-pointer transition-colors shrink-0 ${enabled ? 'bg-green-500' : 'bg-gray-300'}`}
+        onClick={() => onChange(!enabled)}>
+        <div className={`w-4 h-4 bg-white rounded-full shadow-sm mt-0.5 transition-transform ${enabled ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+      </div>
+    </div>
+  )
+}
+
+// ── Hook event metadata ────────────────────────────────────────────
+const hookMeta: Record<string, string> = {
+  "Notification(idle_prompt)": "hook.Task complete",
+  "Notification(permission_prompt)": "hook.Permission needed",
+  "StopFailure": "hook.API errors",
+  "Stop": "hook.Responding finished",
+  "TaskCompleted": "hook.Task completed",
+  "SessionEnd": "hook.Session ended",
+  "Notification(auth_success)": "hook.Auth success",
+  "Notification(elicitation_dialog)": "hook.MCP input",
+  "Notification(elicitation_complete)": "hook.MCP submitted",
+  "PermissionDenied": "hook.Tool denied",
+  "PostToolUse": "hook.File edited",
+  "PostToolUseFailure": "hook.Tool failed",
+  "SubagentStop": "hook.Subagent done",
+  "SessionStart": "hook.Session start",
+  "PostCompact": "hook.Compacted",
+  "ConfigChange": "hook.Config changed",
+  "SubagentStart": "hook.Subagent start",
+  "TaskCreated": "hook.Task created",
+  "PreCompact": "hook.Compacting",
+}
+
+const hookLevels: Record<string, string> = {
+  "Notification(idle_prompt)": "P0",
+  "Notification(permission_prompt)": "P0",
+  "StopFailure": "P0",
+  "Stop": "P0.5",
+  "TaskCompleted": "P0.5",
+  "SessionEnd": "P0.5",
+  "Notification(auth_success)": "P1",
+  "Notification(elicitation_dialog)": "P1",
+  "Notification(elicitation_complete)": "P1",
+  "PermissionDenied": "P1",
+  "PostToolUse": "P1",
+  "PostToolUseFailure": "P1",
+  "SubagentStop": "P1",
+  "SessionStart": "P1",
+  "PostCompact": "P1",
+  "ConfigChange": "P1",
+  "SubagentStart": "P2",
+  "TaskCreated": "P2",
+  "PreCompact": "P2",
+}
+
 // ── Dashboard ──────────────────────────────────────────────────────
-function Dashboard({ state }: { state: AppState }) {
+function Dashboard({ state, onToggleHook }: { state: AppState; onToggleHook: (key: string, v: boolean) => void }) {
   const cards = [
     { title: t("dashboard.notifications"), value: state.counts.total, accent: "border-t-blue-500" },
     { title: t("dashboard.p0_blinks"), value: state.counts.p0, accent: "border-t-red-500" },
@@ -71,6 +139,22 @@ function Dashboard({ state }: { state: AppState }) {
               ))}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Hook Event Configuration */}
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-sm">{t("hooks.title")}</CardTitle></CardHeader>
+        <CardContent>
+          <p className="text-xs text-muted-foreground mb-3">{t("hooks.subtitle")}</p>
+          <div className="space-y-0">
+            {state.hookConfig && Object.entries(state.hookConfig).map(([key, enabled]) => {
+              const i18nKey = hookMeta[key]
+              const label = i18nKey ? t(i18nKey) : key
+              const lvl = hookLevels[key] || ""
+              return <HookToggle key={key} label={label} level={lvl} enabled={enabled} onChange={(v) => onToggleHook(key, v)} />
+            })}
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -123,32 +207,8 @@ function EventLog({ state }: { state: AppState }) {
 }
 
 // ── Settings ───────────────────────────────────────────────────────
-// ── Hook event config (P0/P0.5 default ON, P1/P2 default OFF) ──
-const hookLevels = [
-  { level: "P0 🔔", color: "text-red-600" },
-  { level: "P0.5 🔔", color: "text-orange-500" },
-  { level: "P1 📢", color: "text-blue-600" },
-  { level: "P2 🟢", color: "text-muted-foreground" },
-]
-
-function HookToggle({ label, level, enabled, onChange }: { label: string; level: string; enabled: boolean; onChange: (v: boolean) => void }) {
-  const lvl = hookLevels.find(h => level.startsWith(h.level.slice(0, 2)))
-  return (
-    <div className="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-0">
-      <div className="flex items-center gap-2 text-xs">
-        <span className={lvl?.color || "text-muted-foreground font-mono w-12"}>{level}</span>
-        <span className="text-foreground">{label}</span>
-      </div>
-      <div className={`w-9 h-5 rounded-full cursor-pointer transition-colors ${enabled ? 'bg-green-500' : 'bg-gray-300'}`}
-        onClick={() => onChange(!enabled)}>
-        <div className={`w-4 h-4 bg-white rounded-full shadow-sm mt-0.5 transition-transform ${enabled ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
-      </div>
-    </div>
-  )
-}
-
-function Settings({ state, onSetLang, onUpdatePath, onOpenSettings, onToggleHook }:
-  { state: AppState; onSetLang: (code: string) => void; onUpdatePath: () => void; onOpenSettings: () => void; onToggleHook: (key: string, enabled: boolean) => void }) {
+function Settings({ state, onSetLang, onUpdatePath, onOpenSettings }:
+  { state: AppState; onSetLang: (code: string) => void; onUpdatePath: () => void; onOpenSettings: () => void }) {
   return (
     <div className="p-6 space-y-4 max-w-xl">
       <Card>
@@ -168,41 +228,6 @@ function Settings({ state, onSetLang, onUpdatePath, onOpenSettings, onToggleHook
         <CardContent className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">{t("settings.auto_start_desc")}</p>
           <Switch defaultChecked />
-        </CardContent>
-      </Card>
-
-      {/* Hook configuration card */}
-      <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-sm">Hook Events</CardTitle></CardHeader>
-        <CardContent>
-          <p className="text-xs text-muted-foreground mb-3">Enable/disable notifications for specific hook events</p>
-          <div className="space-y-0">
-            {state.hookConfig && Object.entries(state.hookConfig).map(([key, enabled]) => {
-              const meta = ({
-                "Notification(idle_prompt)":        ["P0",   "Task complete"],
-                "Notification(permission_prompt)":  ["P0",   "Permission needed"],
-                "StopFailure":                      ["P0",   "API errors"],
-                "Stop":                             ["P0.5", "Responding finished"],
-                "TaskCompleted":                    ["P0.5", "Task completed"],
-                "SessionEnd":                       ["P0.5", "Session ended"],
-                "Notification(auth_success)":       ["P1",   "Auth success"],
-                "Notification(elicitation_dialog)": ["P1",   "MCP input"],
-                "Notification(elicitation_complete)":["P1",  "MCP submitted"],
-                "PermissionDenied":                 ["P1",   "Tool denied"],
-                "PostToolUse":                      ["P1",   "File edited"],
-                "PostToolUseFailure":               ["P1",   "Tool failed"],
-                "SubagentStop":                     ["P1",   "Subagent done"],
-                "SessionStart":                     ["P1",   "Session start"],
-                "PostCompact":                      ["P1",   "Compacted"],
-                "ConfigChange":                     ["P1",   "Config changed"],
-                "SubagentStart":                    ["P2",   "Subagent start"],
-                "TaskCreated":                      ["P2",   "Task created"],
-                "PreCompact":                       ["P2",   "Compacting"],
-              } as Record<string, [string, string]>)
-              const [lvl, desc] = meta[key] || ["", key]
-              return <HookToggle key={key} label={desc} level={lvl} enabled={enabled} onChange={(v) => onToggleHook(key, v)} />
-            })}
-          </div>
         </CardContent>
       </Card>
 
@@ -352,9 +377,9 @@ export default function App() {
           </TabsList>
         </div>
 
-        <TabsContent value="dashboard"><Dashboard state={state} /></TabsContent>
+        <TabsContent value="dashboard"><Dashboard state={state} onToggleHook={(key, v) => sendToCs({ type: "set_hook_config", payload: { key, enabled: v } })} /></TabsContent>
         <TabsContent value="eventlog"><EventLog state={state} /></TabsContent>
-        <TabsContent value="settings"><Settings state={state} onSetLang={setLang} onUpdatePath={() => sendToCs({ type: "update_hook_path" })} onOpenSettings={() => sendToCs({ type: "open_settings" })} onToggleHook={(key, enabled) => sendToCs({ type: "set_hook_config", payload: { key, enabled } })} /></TabsContent>
+        <TabsContent value="settings"><Settings state={state} onSetLang={setLang} onUpdatePath={() => sendToCs({ type: "update_hook_path" })} onOpenSettings={() => sendToCs({ type: "open_settings" })} /></TabsContent>
         <TabsContent value="about"><About /></TabsContent>
       </Tabs>
     </div>
