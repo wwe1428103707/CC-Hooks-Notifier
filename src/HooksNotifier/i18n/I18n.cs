@@ -75,14 +75,19 @@ internal static class I18n
         try
         {
             var dir = Path.GetDirectoryName(Environment.ProcessPath);
-            if (string.IsNullOrEmpty(dir)) return false;
+            if (string.IsNullOrEmpty(dir))
+                dir = AppContext.BaseDirectory;
 
             var path = Path.Combine(dir, "i18n", $"{code}.json");
-            if (!File.Exists(path)) return false;
+            if (!File.Exists(path))
+            {
+                Log.Error($"I18n: {code}.json not found at {path}");
+                return false;
+            }
 
             var json = File.ReadAllText(path);
             var entries = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
-            if (entries == null) return false;
+            if (entries == null) { Log.Error($"I18n: {code}.json is empty"); return false; }
 
             // Load the target language
             _strings = entries;

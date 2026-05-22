@@ -49,6 +49,8 @@ Source: "bin\hooks-notifier.runtimeconfig.json"; DestDir: "{app}"; Flags: ignore
 Source: "bin\WinRT.Runtime.dll"; DestDir: "{app}"; Flags: ignoreversion 64bit
 Source: "bin\Microsoft.Windows.SDK.NET.dll"; DestDir: "{app}"; Flags: ignoreversion 64bit
 Source: "bin\hooks-notifier.pdb"; DestDir: "{app}"; Flags: ignoreversion
+; i18n language files
+Source: "bin\i18n\*.json"; DestDir: "{app}\i18n"; Flags: ignoreversion
 ; Support scripts
 Source: "setup.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "hooks\notify.ps1"; DestDir: "{app}\hooks"; Flags: ignoreversion
