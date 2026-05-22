@@ -33,8 +33,9 @@ internal static class HookMode
         return data.HookEventName switch
         {
             "PermissionRequest" => HandlePermissionRequest(data),
-            "Notification" => HandleNotification(data),
-            _ => HandleDefault(data)
+            "Notification"      => HandleNotification(data),
+            "StopFailure"       => HandleStopFailure(data),
+            _                   => HandleDefault(data)
         };
     }
 
@@ -68,7 +69,7 @@ internal static class HookMode
     }
 
     /// <summary>Try sending via IPC to tray. Returns true if tray handled it.</summary>
-    private static bool TrySendIpc(string? eventType, string title, string body, string blinkType)
+    private static bool TrySendIpc(string? eventType, string title, string body, string blinkType, string eventName = "Notification")
     {
         try
         {
@@ -77,7 +78,7 @@ internal static class HookMode
                 Type = "toast",
                 Title = title,
                 Body = body,
-                EventName = "Notification",
+                EventName = eventName,
                 EventType = eventType ?? "",
                 BlinkType = blinkType
             };
@@ -87,6 +88,35 @@ internal static class HookMode
         {
             return false;
         }
+    }
+
+    // ── StopFailure event ─────────────────────────────────────────────
+    private static int HandleStopFailure(HookData data)
+    {
+        var eventType = data.HookEventType ?? "unknown";
+        var (title, body, blinkType) = eventType switch
+        {
+            "rate_limit"            => ("Claude Code — Rate Limited",
+                "API rate limit reached. Claude may retry shortly.", "long"),
+            "server_error"          => ("Claude Code — Server Error",
+                "Claude API encountered a server error.", "long"),
+            "authentication_failed" => ("Claude Code — Auth Failed",
+                "Authentication failed. Check your API credentials.", "long"),
+            "billing_error"         => ("Claude Code — Billing Error",
+                "There is a billing issue with your API account.", "none"),
+            "max_output_tokens"     => ("Claude Code",
+                "Response was truncated (max output tokens reached).", "none"),
+            "model_not_found"       => ("Claude Code",
+                "Requested model is not available.", "none"),
+            _                       => ("Claude Code",
+                $"API error: {eventType}", "none")
+        };
+
+        if (TrySendIpc(eventType, title, body, blinkType, "StopFailure"))
+            return 0;
+
+        ToastService.Show(title, body);
+        return 0;
     }
 
     // ── Permission request event ───────────────────────────────────────
