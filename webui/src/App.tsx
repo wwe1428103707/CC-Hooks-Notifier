@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import { t, setLanguage } from "./i18n"
 
 // ── Types ──────────────────────────────────────────────────────────
 interface Counts { total: number; p0: number; p05: number; toast: number; stateful: number }
@@ -19,7 +20,6 @@ const defaultState: AppState = {
   subagentCount: 0, taskCount: 0, recentEvents: [], allEvents: [], language: "en",
 }
 
-// ── WebBridge helpers ──────────────────────────────────────────────
 const isWebView = typeof (window as any).chrome?.webview?.postMessage === "function"
 function sendToCs(msg: object) {
   if (isWebView) (window as any).chrome.webview.postMessage(JSON.stringify(msg))
@@ -28,20 +28,15 @@ function sendToCs(msg: object) {
 // ── Dashboard ──────────────────────────────────────────────────────
 function Dashboard({ state }: { state: AppState }) {
   const cards = [
-    { title: "Notifications", value: state.counts.total, accent: "border-t-blue-500" },
-    { title: "P0 Blinks", value: state.counts.p0, accent: "border-t-red-500" },
-    { title: "Toasts", value: state.counts.toast, accent: "border-t-blue-500" },
-    { title: "Subagents", value: state.subagentCount, accent: "border-t-green-500" },
-    { title: "Tasks", value: state.taskCount, accent: "border-t-green-500" },
+    { title: t("dashboard.notifications"), value: state.counts.total, accent: "border-t-blue-500" },
+    { title: t("dashboard.p0_blinks"), value: state.counts.p0, accent: "border-t-red-500" },
+    { title: t("dashboard.toasts"), value: state.counts.toast, accent: "border-t-blue-500" },
+    { title: t("dashboard.subagents"), value: state.subagentCount, accent: "border-t-green-500" },
+    { title: t("dashboard.tasks"), value: state.taskCount, accent: "border-t-green-500" },
   ]
 
   const levelIcon = (lvl: string) => {
-    switch (lvl) {
-      case "P0": return "🔴"
-      case "P0.5": return "🟠"
-      case "Toast": return "🔵"
-      default: return "⚪"
-    }
+    switch (lvl) { case "P0": return "🔴"; case "P0.5": return "🟠"; case "Toast": return "🔵"; default: return "⚪" }
   }
 
   return (
@@ -52,17 +47,15 @@ function Dashboard({ state }: { state: AppState }) {
             <CardHeader className="pb-1 pt-3 px-4">
               <CardTitle className="text-xs text-muted-foreground">{c.title}</CardTitle>
             </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <p className="text-3xl font-bold">{c.value}</p>
-            </CardContent>
+            <CardContent className="px-4 pb-4"><p className="text-3xl font-bold">{c.value}</p></CardContent>
           </Card>
         ))}
       </div>
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-sm">Recent Events</CardTitle></CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-sm">{t("dashboard.recent_events")}</CardTitle></CardHeader>
         <CardContent className="px-4 pb-4">
           {state.recentEvents.length === 0 ? (
-            <p className="text-sm text-muted-foreground">(no events yet)</p>
+            <p className="text-sm text-muted-foreground">{t("dashboard.no_events")}</p>
           ) : (
             <div className="space-y-1.5">
               {state.recentEvents.map((e, i) => (
@@ -95,22 +88,22 @@ function EventLog({ state }: { state: AppState }) {
   return (
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold">Event Log</h2>
-        <p className="text-xs text-muted-foreground">{state.allEvents.length} total</p>
+        <h2 className="text-sm font-semibold">{t("event_log.title")}</h2>
+        <p className="text-xs text-muted-foreground">{t("event_log.total", String(state.allEvents.length))}</p>
       </div>
       <div className="border rounded-lg overflow-hidden">
         <table className="w-full text-xs font-mono">
           <thead>
             <tr className="bg-muted/50 text-left">
-              <th className="px-3 py-2 text-muted-foreground font-medium">Time</th>
-              <th className="px-3 py-2 text-muted-foreground font-medium">Level</th>
-              <th className="px-3 py-2 text-muted-foreground font-medium">Event</th>
-              <th className="px-3 py-2 text-muted-foreground font-medium">Content</th>
+              <th className="px-3 py-2 text-muted-foreground font-medium">{t("event_log.time")}</th>
+              <th className="px-3 py-2 text-muted-foreground font-medium">{t("event_log.level")}</th>
+              <th className="px-3 py-2 text-muted-foreground font-medium">{t("event_log.event")}</th>
+              <th className="px-3 py-2 text-muted-foreground font-medium">{t("event_log.content")}</th>
             </tr>
           </thead>
           <tbody>
             {state.allEvents.length === 0 ? (
-              <tr><td colSpan={4} className="px-3 py-8 text-center text-muted-foreground">(no events)</td></tr>
+              <tr><td colSpan={4} className="px-3 py-8 text-center text-muted-foreground">{t("event_log.no_events")}</td></tr>
             ) : state.allEvents.map((e, i) => (
               <tr key={i} className="border-t hover:bg-muted/30">
                 <td className="px-3 py-1.5 text-muted-foreground">{e.timestamp}</td>
@@ -126,12 +119,12 @@ function EventLog({ state }: { state: AppState }) {
   )
 }
 
-// ── Settings ────────────────────────────────────────────────────────
+// ── Settings ───────────────────────────────────────────────────────
 function Settings({ state, onSetLang }: { state: AppState; onSetLang: (code: string) => void }) {
   return (
     <div className="p-6 space-y-4 max-w-xl">
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-sm">Language</CardTitle></CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-sm">{t("settings.language")}</CardTitle></CardHeader>
         <CardContent>
           <Select value={state.language} onValueChange={onSetLang}>
             <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
@@ -143,23 +136,23 @@ function Settings({ state, onSetLang }: { state: AppState; onSetLang: (code: str
         </CardContent>
       </Card>
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-sm">Auto-start</CardTitle></CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-sm">{t("settings.auto_start")}</CardTitle></CardHeader>
         <CardContent className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">Start when I log in</p>
+          <p className="text-sm text-muted-foreground">{t("settings.auto_start_desc")}</p>
           <Switch defaultChecked />
         </CardContent>
       </Card>
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-sm">Hook Executable Path</CardTitle></CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-sm">{t("settings.hook_path")}</CardTitle></CardHeader>
         <CardContent className="space-y-2">
-          <p className="text-xs font-mono text-muted-foreground break-all">(loaded from C# backend)</p>
-          <Button variant="outline" size="sm">Update Path</Button>
+          <p className="text-xs font-mono text-muted-foreground break-all">{t("settings.hook_path_placeholder")}</p>
+          <Button variant="outline" size="sm">{t("settings.update_path")}</Button>
         </CardContent>
       </Card>
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-sm">Settings File</CardTitle></CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-sm">{t("settings.settings_file")}</CardTitle></CardHeader>
         <CardContent>
-          <Button variant="outline" size="sm">Open settings.json</Button>
+          <Button variant="outline" size="sm">{t("settings.open_file")}</Button>
         </CardContent>
       </Card>
     </div>
@@ -182,24 +175,19 @@ function About() {
           <span className="text-4xl">⚡</span>
           <div>
             <h2 className="text-xl font-bold">Claude Code Hooks Notifier</h2>
-            <p className="text-sm text-muted-foreground">Version: 1.4.0</p>
+            <p className="text-sm text-muted-foreground">{t("about.version", "1.4.0")}</p>
           </div>
         </div>
-        <p className="text-sm text-muted-foreground">
-          Tech Stack: React + shadcn/ui + WebView2 + C# .NET 9
-        </p>
-        <p className="text-sm">
-          Windows system tray notification service for Claude Code hooks.
-          Monitors PermissionRequest, Notification, StopFailure, and more.
-        </p>
+        <p className="text-sm text-muted-foreground">{t("about.tech_stack")}</p>
+        <p className="text-sm">{t("about.description")}</p>
         <div className="border-t pt-4">
-          <h3 className="text-sm font-semibold mb-2">Hook Event Coverage</h3>
+          <h3 className="text-sm font-semibold mb-2">{t("about.coverage")}</h3>
           <table className="w-full text-xs">
             <thead>
               <tr className="text-muted-foreground">
-                <th className="text-left py-1 pr-4">Level</th>
-                <th className="text-left py-1 pr-4">Type</th>
-                <th className="text-left py-1">Events</th>
+                <th className="text-left py-1 pr-4">{t("about.level")}</th>
+                <th className="text-left py-1 pr-4">{t("about.type")}</th>
+                <th className="text-left py-1">{t("about.events")}</th>
               </tr>
             </thead>
             <tbody>
@@ -222,10 +210,11 @@ function About() {
 export default function App() {
   const [state, setState] = useState<AppState>(defaultState)
 
-  // Listen for C# messages via WebBridge
   const handleCsMessage = useCallback((msg: AppState & { type: string; payload: any }) => {
-    if (msg.type === "state_sync") setState(msg.payload)
-    else if (msg.type === "event_push") {
+    if (msg.type === "state_sync") {
+      setLanguage(msg.payload.language)
+      setState(msg.payload)
+    } else if (msg.type === "event_push") {
       setState(prev => ({
         ...prev,
         recentEvents: [msg.payload, ...prev.recentEvents].slice(0, 5),
@@ -246,46 +235,43 @@ export default function App() {
 
   useEffect(() => {
     if (isWebView) {
-      // Listen for C# messages in WebView2
-      window.addEventListener("message", (e) => {
-        try { handleCsMessage(JSON.parse(e.data)) } catch {}
-      })
-      // Also listen via chrome.webview if available
+      window.addEventListener("message", (e) => { try { handleCsMessage(JSON.parse(e.data)) } catch {} })
       if ((window as any).chrome?.webview?.addEventListener) {
-        ;(window as any).chrome.webview.addEventListener("message", (e: any) => {
-          try { handleCsMessage(JSON.parse(e.data)) } catch {}
-        })
+        ;(window as any).chrome.webview.addEventListener("message", (e: any) => { try { handleCsMessage(JSON.parse(e.data)) } catch {} })
       }
-      // Request initial state
       sendToCs({ type: "get_state" })
     }
   }, [handleCsMessage])
 
-  const setLanguage = (code: string) => {
-    sendToCs({ type: "set_lang", payload: code })
+  // Sync language from state on first load
+  useEffect(() => { setLanguage(state.language) }, []) // eslint-disable-line
+
+  const setLang = (code: string) => {
+    setLanguage(code)
     setState(prev => ({ ...prev, language: code }))
+    sendToCs({ type: "set_lang", payload: code })
   }
 
   return (
     <div className="min-h-screen bg-[#f5f7fa]">
       <header className="bg-[#212529] text-white h-12 flex items-center px-5 gap-2">
-        <span className="text-lg font-bold">⚡ Claude Code Hooks Notifier</span>
-        <span className="text-xs text-gray-400 pt-0.5">v1.4.0</span>
+        <span className="text-lg font-bold">⚡ {t("window.title")}</span>
+        <span className="text-xs text-gray-400 pt-0.5">{t("header.version")}</span>
       </header>
 
       <Tabs defaultValue="dashboard" className="w-full">
         <div className="px-6 pt-3 border-b bg-white">
           <TabsList>
-            <TabsTrigger value="dashboard">📊 Dashboard</TabsTrigger>
-            <TabsTrigger value="eventlog">📋 Event Log</TabsTrigger>
-            <TabsTrigger value="settings">⚙ Settings</TabsTrigger>
-            <TabsTrigger value="about">ℹ About</TabsTrigger>
+            <TabsTrigger value="dashboard">📊 {t("tab.dashboard")}</TabsTrigger>
+            <TabsTrigger value="eventlog">📋 {t("tab.event_log")}</TabsTrigger>
+            <TabsTrigger value="settings">⚙ {t("tab.settings")}</TabsTrigger>
+            <TabsTrigger value="about">ℹ {t("tab.about")}</TabsTrigger>
           </TabsList>
         </div>
 
         <TabsContent value="dashboard"><Dashboard state={state} /></TabsContent>
         <TabsContent value="eventlog"><EventLog state={state} /></TabsContent>
-        <TabsContent value="settings"><Settings state={state} onSetLang={setLanguage} /></TabsContent>
+        <TabsContent value="settings"><Settings state={state} onSetLang={setLang} /></TabsContent>
         <TabsContent value="about"><About /></TabsContent>
       </Tabs>
     </div>

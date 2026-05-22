@@ -1,0 +1,99 @@
+// ── In-browser i18n (mirrors C# I18n keys) ─────────────────────────
+
+const strings: Record<string, Record<string, string>> = {
+  en: {
+    "window.title": "Claude Code Hooks Notifier",
+    "tab.dashboard": "Dashboard",
+    "tab.event_log": "Event Log",
+    "tab.settings": "Settings",
+    "tab.about": "About",
+    "dashboard.notifications": "Notifications",
+    "dashboard.p0_blinks": "P0 Blinks",
+    "dashboard.toasts": "Toasts",
+    "dashboard.subagents": "Subagents",
+    "dashboard.tasks": "Tasks",
+    "dashboard.recent_events": "Recent Events",
+    "dashboard.no_events": "(no events yet)",
+    "event_log.title": "Event Log",
+    "event_log.time": "Time",
+    "event_log.level": "Level",
+    "event_log.event": "Event",
+    "event_log.content": "Content",
+    "event_log.total": "{0} total",
+    "event_log.no_events": "(no events)",
+    "settings.language": "Language",
+    "settings.auto_start": "Auto-start",
+    "settings.auto_start_desc": "Start when I log in",
+    "settings.hook_path": "Hook Executable Path",
+    "settings.hook_path_placeholder": "(loaded from C# backend)",
+    "settings.update_path": "Update Path",
+    "settings.settings_file": "Settings File",
+    "settings.open_file": "Open settings.json",
+    "about.version": "Version: {0}",
+    "about.tech_stack": "Tech Stack: React + shadcn/ui + WebView2 + C# .NET 9",
+    "about.description": "Windows system tray notification service for Claude Code hooks. Monitors PermissionRequest, Notification, StopFailure, and more.",
+    "about.coverage": "Hook Event Coverage",
+    "about.level": "Level",
+    "about.type": "Type",
+    "about.events": "Events",
+    "header.version": "v1.4.0",
+    "service.running": "Service Running",
+  },
+  zh: {
+    "window.title": "Claude Code Hooks Notifier",
+    "tab.dashboard": "仪表盘",
+    "tab.event_log": "事件日志",
+    "tab.settings": "设置",
+    "tab.about": "关于",
+    "dashboard.notifications": "通知",
+    "dashboard.p0_blinks": "P0 闪烁",
+    "dashboard.toasts": "Toast",
+    "dashboard.subagents": "子代理",
+    "dashboard.tasks": "任务",
+    "dashboard.recent_events": "最近事件",
+    "dashboard.no_events": "（暂无事件）",
+    "event_log.title": "事件日志",
+    "event_log.time": "时间",
+    "event_log.level": "级别",
+    "event_log.event": "事件",
+    "event_log.content": "内容",
+    "event_log.total": "共 {0} 条",
+    "event_log.no_events": "（无事件）",
+    "settings.language": "语言",
+    "settings.auto_start": "开机自启",
+    "settings.auto_start_desc": "登录时自动启动",
+    "settings.hook_path": "Hook 执行路径",
+    "settings.hook_path_placeholder": "（由 C# 后端加载）",
+    "settings.update_path": "更新路径",
+    "settings.settings_file": "设置文件",
+    "settings.open_file": "打开 settings.json",
+    "about.version": "版本: {0}",
+    "about.tech_stack": "技术栈: React + shadcn/ui + WebView2 + C# .NET 9",
+    "about.description": "Windows 系统托盘通知服务，用于 Claude Code hooks。监控 PermissionRequest、Notification、StopFailure 等事件。",
+    "about.coverage": "Hook 事件覆盖",
+    "about.level": "级别",
+    "about.type": "类型",
+    "about.events": "事件",
+    "header.version": "v1.4.0",
+    "service.running": "服务运行中",
+  },
+}
+
+let currentLang = "en"
+
+export function setLanguage(code: string) {
+  currentLang = code
+}
+
+export function getLanguage(): string {
+  return currentLang
+}
+
+export function t(key: string, ...args: string[]): string {
+  const table = strings[currentLang] || strings.en
+  let val = table[key] || strings.en[key] || `?${key}?`
+  args.forEach((arg, i) => {
+    val = val.replace(`{${i}}`, arg)
+  })
+  return val
+}

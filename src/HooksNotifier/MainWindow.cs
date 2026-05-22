@@ -12,8 +12,8 @@ internal partial class MainWindow : Form
     public MainWindow()
     {
         Text = "Claude Code Hooks Notifier";
-        Size = new Size(960, 640);
-        MinimumSize = new Size(860, 560);
+        Size = new Size(1200, 800);
+        MinimumSize = new Size(960, 640);
         StartPosition = FormStartPosition.CenterScreen;
         BackColor = Color.FromArgb(245, 247, 250);
 
@@ -121,7 +121,11 @@ internal partial class MainWindow : Form
                     break;
                 case "set_lang":
                     var lang = doc.RootElement.GetProperty("payload").GetString();
-                    if (lang != null) I18n.SetLanguage(lang);
+                    if (lang != null)
+                    {
+                        I18n.SetLanguage(lang);
+                        PushState("lang_changed", lang);
+                    }
                     break;
             }
         }
