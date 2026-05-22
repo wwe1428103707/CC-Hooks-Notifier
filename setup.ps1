@@ -184,6 +184,9 @@ function Install-Hooks {
             (New-HookEntry 'Notification' 'elicitation_dialog')
             (New-HookEntry 'Notification' 'elicitation_complete')
         )
+        'StopFailure' = @(
+            (New-HookEntry 'StopFailure' '')
+        )
     }
 
     $added = @()
