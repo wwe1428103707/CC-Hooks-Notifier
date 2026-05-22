@@ -196,6 +196,15 @@ function Install-Hooks {
         'PostToolUseFailure' = @(
             (New-HookEntry 'PostToolUseFailure' 'Bash|Edit')
         )
+        'SubagentStart' = @(
+            (New-HookEntry 'SubagentStart' '')
+        )
+        'SubagentStop' = @(
+            (New-HookEntry 'SubagentStop' '')
+        )
+        'TaskCreated' = @(
+            (New-HookEntry 'TaskCreated' '')
+        )
     }
 
     $added = @()
