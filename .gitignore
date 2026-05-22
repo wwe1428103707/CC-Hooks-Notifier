@@ -8,6 +8,9 @@ src/**/Release/
 .nuget/
 packages/
 
+# Node.js / webui
+node_modules/
+
 # Build outputs
 bin/
 ClaudeCodeHooksNotifier-Setup.exe
