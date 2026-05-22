@@ -247,10 +247,19 @@ export default function App() {
 
   useEffect(() => {
     if (isWebView) {
-      window.addEventListener("message", (e) => { try { handleCsMessage(JSON.parse(e.data)) } catch {} })
-      if ((window as any).chrome?.webview?.addEventListener) {
-        ;(window as any).chrome.webview.addEventListener("message", (e: any) => { try { handleCsMessage(JSON.parse(e.data)) } catch {} })
+      // C# PostWebMessageAsJson delivers e.data as a parsed object, not a string
+      const onCsMsg = (e: any) => {
+        try {
+          const data = typeof e.data === "string" ? JSON.parse(e.data) : e.data
+          handleCsMessage(data)
+        } catch { /* ignore malformed */ }
       }
+      // WebView2: e.data is already an object
+      if ((window as any).chrome?.webview?.addEventListener) {
+        ;(window as any).chrome.webview.addEventListener("message", onCsMsg)
+      }
+      // Fallback: window.postMessage (e.data is a string)
+      window.addEventListener("message", onCsMsg)
       sendToCs({ type: "get_state" })
     }
   }, [handleCsMessage])
