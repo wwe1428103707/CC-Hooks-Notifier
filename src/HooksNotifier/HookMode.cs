@@ -38,6 +38,9 @@ internal static class HookMode
             "PermissionDenied"   => HandlePermissionDenied(data),
             "PostToolUse"        => HandlePostToolUse(data),
             "PostToolUseFailure" => HandlePostToolUseFailure(data),
+            "SubagentStart"      => HandleSubagentStart(data),
+            "SubagentStop"       => HandleSubagentStop(data),
+            "TaskCreated"        => HandleTaskCreated(data),
             _                    => HandleDefault(data)
         };
     }
@@ -196,6 +199,57 @@ internal static class HookMode
             }
         }
         return "";
+    }
+
+    // ── SubagentStart event ──────────────────────────────────────────
+    private static int HandleSubagentStart(HookData data)
+    {
+        var agentType = data.HookEventType ?? "unknown";
+        TrySendStateful("SubagentStart", agentType, $"Subagent started: {agentType}");
+        return 0; // stateful-only — no toast fallback needed
+    }
+
+    // ── SubagentStop event ───────────────────────────────────────────
+    private static int HandleSubagentStop(HookData data)
+    {
+        var agentType = data.HookEventType ?? "unknown";
+        var title = "Claude Code";
+        var body = $"Subagent finished: {agentType}";
+
+        if (TrySendIpc(null, title, body, "none", "SubagentStop"))
+            return 0;
+
+        ToastService.Show(title, body);
+        return 0;
+    }
+
+    // ── TaskCreated event ────────────────────────────────────────────
+    private static int HandleTaskCreated(HookData data)
+    {
+        var desc = data.HookEventSubtype ?? data.Description ?? "new task";
+        TrySendStateful("TaskCreated", desc, $"Task created: {desc}");
+        return 0; // stateful-only — no toast fallback needed
+    }
+
+    /// <summary>Send a stateful IPC update (tray status only, no toast).</summary>
+    private static void TrySendStateful(string eventName, string eventType, string description)
+    {
+        try
+        {
+            var msg = new IpcMessage
+            {
+                Type = "stateful",
+                Title = description,
+                EventName = eventName,
+                EventType = eventType,
+                BlinkType = "none"
+            };
+            IpcService.Send(msg);
+        }
+        catch
+        {
+            // Tray not running — stateful update silently skipped
+        }
     }
 
     // ── Permission request event ───────────────────────────────────────

@@ -22,6 +22,12 @@ internal static class TrayMode
     private static CancellationTokenSource? _cts;
     private static SynchronizationContext? _uiContext;
 
+    // ── Stateful counters (updated via IPC) ─────────────────────────
+    private static int _subagentCount;
+    private static int _taskCount;
+    private static string _lastAgentType = "";
+    private static string _lastTaskDesc = "";
+
     public static int Run()
     {
         // Single instance check
@@ -87,6 +93,23 @@ internal static class TrayMode
                     };
                     if (ticks > 0)
                         StartBlinking(ticks);
+                    break;
+
+                case "stateful":
+                    switch (msg.EventName)
+                    {
+                        case "SubagentStart":
+                            _subagentCount++;
+                            _lastAgentType = msg.EventType;
+                            break;
+                        case "SubagentStop":
+                            _lastAgentType = "";
+                            break;
+                        case "TaskCreated":
+                            _taskCount++;
+                            _lastTaskDesc = msg.EventType;
+                            break;
+                    }
                     break;
             }
         }, null);
