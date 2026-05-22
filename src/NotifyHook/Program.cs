@@ -19,6 +19,19 @@ sealed class Program
 
     static int Main()
     {
+        // When double-clicked (no pipe), launch tray and exit
+        if (!Console.IsInputRedirected)
+        {
+            var dir = Path.GetDirectoryName(Environment.ProcessPath);
+            var trayExe = dir != null ? Path.Combine(dir, "hooks-notifier.exe") : null;
+            if (trayExe != null && File.Exists(trayExe))
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(trayExe, "--tray")
+                { UseShellExecute = true });
+            }
+            return 0;
+        }
+
         string rawJson;
         try { rawJson = Console.In.ReadToEnd(); }
         catch { return 1; }
