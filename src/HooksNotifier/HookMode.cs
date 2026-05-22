@@ -41,6 +41,9 @@ internal static class HookMode
             "SubagentStart"      => HandleSubagentStart(data),
             "SubagentStop"       => HandleSubagentStop(data),
             "TaskCreated"        => HandleTaskCreated(data),
+            "Stop"               => HandleStop(data),
+            "TaskCompleted"      => HandleTaskCompleted(data),
+            "SessionEnd"         => HandleSessionEnd(data),
             _                    => HandleDefault(data)
         };
     }
@@ -272,6 +275,47 @@ internal static class HookMode
             }
         };
         Console.WriteLine(JsonSerializer.Serialize(output, JsonOpts.Default));
+        return 0;
+    }
+
+    // ── Stop event (P0.5 short blink) ─────────────────────────────────
+    private static int HandleStop(HookData data)
+    {
+        var title = "Claude Code";
+        var body = "Finished responding";
+        if (TrySendIpc(null, title, body, "short", "Stop"))
+            return 0;
+        ToastService.Show(title, body);
+        return 0;
+    }
+
+    // ── TaskCompleted event (P0.5 short blink) ────────────────────────
+    private static int HandleTaskCompleted(HookData data)
+    {
+        var desc = data.HookEventSubtype ?? data.Description ?? "task";
+        var title = "Claude Code";
+        var body = $"Task completed: {desc}";
+        if (TrySendIpc(null, title, body, "short", "TaskCompleted"))
+            return 0;
+        ToastService.Show(title, body);
+        return 0;
+    }
+
+    // ── SessionEnd event (P0.5 short blink for key reasons) ───────────
+    private static int HandleSessionEnd(HookData data)
+    {
+        var eventType = data.HookEventType ?? "";
+        // Only blink for user-initiated session ends, not background events
+        var blinkType = eventType switch
+        {
+            "clear" or "logout" or "prompt_input_exit" => "short",
+            _ => "none"
+        };
+        var title = "Claude Code";
+        var body = blinkType == "short" ? "Session ended" : $"Session: {eventType}";
+        if (TrySendIpc(null, title, body, blinkType, "SessionEnd"))
+            return 0;
+        ToastService.Show(title, body);
         return 0;
     }
 
