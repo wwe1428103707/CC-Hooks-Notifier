@@ -2,7 +2,7 @@
 ; Compile: ISCC.exe setup.iss
 
 #define MyAppName "Claude Code Hooks Notifier"
-#define MyAppVersion "1.3.0"
+#define MyAppVersion "1.4.0"
 #define MyAppPublisher "Claude Code Hooks Notifier"
 #define MyAppExeName "hooks-notifier.exe"
 
@@ -29,6 +29,14 @@ WizardSizePercent=120
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
+Name: "chinese"; MessagesFile: "installer\ChineseSimplified.isl"
+
+[CustomMessages]
+english.PostInstallLabel=Launch [name] now
+chinese.PostInstallLabel=立即启动 [name]
+
+english.FinishedLabel=Setup has completed installing [name].{newline}{newline}Click Finish to exit Setup.
+chinese.FinishedLabel=安装程序已完成安装 [name]。{newline}{newline}单击"完成"退出安装程序。
 
 [Tasks]
 Name: "autostart"; Description: "Start automatically when I log in"; GroupDescription: "Startup options:"
