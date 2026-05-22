@@ -210,3 +210,235 @@ p2-coverage               ├── step-9-compact
 |------|---------|------|--------|
 | Initial | 1.2.0 | baseline | v1.2.0 complete |
 | Step 8-10 | 1.3.0 | minor | New hook event coverage |
+
+---
+
+# Development Plan — i18n Multi-Language Support (v2.0.0)
+
+## Overview
+
+Add Chinese/English language switching capability with a scalable i18n system that supports adding more languages without code changes.
+
+## Architecture
+
+```
+src/HooksNotifier/
+├── i18n/
+│   ├── I18n.cs              # Translation service (singleton)
+│   ├── en.json               # English string table
+│   └── zh.json               # Chinese string table
+└── (all other files)         # Use I18n.Get("key") instead of hardcoded strings
+```
+
+### Design Principles
+
+| Principle | Implementation |
+|-----------|---------------|
+| **Zero recompilation** for new languages | New `.json` file only |
+| **Runtime switching** | Tray menu → language submenu → immediate refresh |
+| **System language auto-detect** | `CultureInfo.CurrentUICulture` fallback chain |
+| **Key-based lookup** | `I18n.Get("toast.task_complete")` instead of hardcoded strings |
+| **Format string support** | `I18n.Get("tool.denied", toolName)` → `"Tool call denied: Bash"` |
+| **Persist preference** | Save selected language to `HKCU\Software\ClaudeCode\HooksNotifier\Language` |
+
+### String Key Naming Convention
+
+```
+{domain}.{specific}
+```
+
+| Domain | Examples |
+|--------|---------|
+| `toast.*` | `toast.idle_prompt`, `toast.auth_success`, `toast.session_started` |
+| `error.*` | `error.rate_limit`, `error.server_error`, `error.auth_failed` |
+| `tool.*` | `tool.edit_file`, `tool.denied`, `tool.mcp_denied` |
+| `menu.*` | `menu.configure_hooks`, `menu.open_at_login`, `menu.exit` |
+| `dialog.*` | `dialog.perm_title`, `dialog.allow`, `dialog.deny` |
+| `status.*` | `status.subagent`, `status.task`, `status.notifications` |
+| `installer.*` | Strings for the Inno Setup installer wizard |
+
+### String File Format (`en.json`)
+
+```json
+{
+  "language": {
+    "code": "en",
+    "name": "English"
+  },
+  "toast": {
+    "idle_prompt": "Task complete — ready for your input",
+    "permission_prompt": "Claude is waiting for you to approve a tool call",
+    "auth_success": "Authentication successful",
+    "session_started": "Session started",
+    "session_resumed": "Session resumed",
+    "context_compacted": "Context compaction complete",
+    "tool_edited": "Edited: {path}",
+    "tool_denied": "Tool call denied: {tool}",
+    "tool_mcp_denied": "MCP tool denied: {tool}",
+    "tool_failed": "Tool failed: {tool}",
+    "cmd_failed": "Command failed — see terminal for details",
+    "subagent_finished": "Subagent finished: {agent}",
+    "task_completed": "Task completed: {desc}",
+    "session_ended": "Session ended",
+    "config_modified": "{source} modified",
+    "config_file_modified": "{source}: {file}"
+  },
+  "error": {
+    "rate_limit": "API rate limit reached. Claude may retry shortly.",
+    "server_error": "Claude API encountered a server error.",
+    "auth_failed": "Authentication failed. Check your API credentials.",
+    "billing_error": "There is a billing issue with your API account.",
+    "max_tokens": "Response was truncated (max output tokens reached).",
+    "model_not_found": "Requested model is not available.",
+    "unknown": "API error: {type}"
+  },
+  "dialog": {
+    "perm_title": "Claude needs authorization",
+    "allow": "Allow",
+    "deny": "Deny",
+    "tool_label": "Tool: {tool}",
+    "no_details": "(no details)"
+  },
+  "menu": {
+    "running": "Hooks Notifier — running",
+    "notifications": "Notifications: {count}",
+    "subagent": "Subagent: {status}",
+    "subagent_idle": "Subagent: IDLE",
+    "task": "Task: {status}",
+    "task_idle": "Task: IDLE",
+    "configure_hooks": "Configure Hooks",
+    "update_hook_path": "Update Hook Path",
+    "clear_counters": "Clear counters",
+    "open_at_login": "Open at Login",
+    "language": "Language",
+    "about": "About...",
+    "exit": "Exit"
+  },
+  "about": {
+    "title": "Claude Code Hooks Notifier",
+    "version": "v{version}\nBell icon tray + toast notifications"
+  }
+}
+```
+
+## Branch Strategy
+
+```
+master        v1.3.0 ─── step-11 ─── step-12 ─── step-13 ─── v2.0.0
+                            │
+feature/                  ├── step-11-i18n-engine
+i18n                      ├── step-12-localize-ui
+                          └── step-13-localize-installer
+```
+
+## Steps
+
+### Step 11 — i18n Engine (Core)
+
+**Branch:** `feature/step-11-i18n-engine`
+
+| File | Change |
+|------|--------|
+| `src/HooksNotifier/i18n/en.json` | Create — all English strings (base file) |
+| `src/HooksNotifier/i18n/zh.json` | Create — Chinese translations |
+| `src/HooksNotifier/i18n/I18n.cs` | Create — translation service class |
+| `.csproj` | Add `i18n/*.json` as `EmbeddedResource` or `Content` |
+
+**I18n.cs API:**
+
+```csharp
+internal static class I18n
+{
+    static I18n() => Load(SystemCulture);
+
+    public static string CurrentLanguage { get; private set; }  // "en" / "zh"
+    public static string[] AvailableLanguages => ["en", "zh"];
+
+    public static string Get(string key);
+    public static string Get(string key, params object?[] args);
+    public static void SetLanguage(string code);  // runtime switch
+}
+```
+
+**Lookup strategy:**
+1. Exact match from current language file
+2. Fallback to `en.json` if key missing in target
+3. Return `"?{key}?"` if missing in both (visible missing-key indicator)
+
+### Step 12 — Localize All UI Strings
+
+**Branch:** `feature/step-12-localize-ui`
+
+Replace every hardcoded UI string across all files with `I18n.Get(...)` calls.
+
+**Files to modify:**
+
+| File | Strings to replace |
+|------|-------------------|
+| `HookMode.cs` | All `title`/`body` strings in event handlers, dialog labels |
+| `PermissionDialog` (in HookMode.cs) | Title, button text, labels |
+| `TrayMode.cs` | Menu items, status text, About balloon, notifications |
+| `ToastService.cs` | (no changes needed — uses string params) |
+| `Program.cs` | Usage text (optional, or keep bilingual) |
+
+**Tray menu update — add Language submenu:**
+
+```
+Hooks Notifier — running
+Notifications: 0
+Subagent: IDLE
+Task: IDLE
+──────────────────────────
+Configure Hooks
+Update Hook Path
+Clear counters
+Open at Login
+Language
+  → English      ● (current)
+  → 中文
+About...
+──────────────────────────
+Exit
+```
+
+### Step 13 — Localize Installer
+
+**Branch:** `feature/step-13-localize-installer`
+
+| File | Change |
+|------|--------|
+| `setup.iss` | Add `[Languages]` section with English + Chinese Simplified |
+| `setup.iss` | Add Chinese language `.isl` file from Inno Setup installation |
+| `setup.iss` | Translate wizard messages for Chinese |
+
+**Inno Setup multi-language example:**
+
+```iss
+[Languages]
+Name: "english"; MessagesFile: "compiler:Default.isl"
+Name: "chinese"; MessagesFile: "compiler:ChineseSimplified.isl"
+
+[CustomMessages]
+english.WelcomeLabel2 = This will install [name] on your computer.
+chinese.WelcomeLabel2 = 此程序将安装 [name] 到您的计算机。
+```
+
+**Note:** ChineseSimplified.isl may not ship with Inno Setup by default. If missing, it needs to be downloaded separately from the Inno Setup website and placed in the `Languages` folder.
+
+## Version
+
+| Step | Version | Type | Reason |
+|------|---------|------|--------|
+| Initial | 1.3.0 | baseline | Current state |
+| Step 11 | 1.3.0 | (internal) | i18n engine added, no visible change |
+| Step 12 | 1.4.0 | minor | UI now bilingual via runtime switch |
+| Step 13 | 2.0.0 | minor | Installer supports language selection |
+
+## Future Language Addition
+
+To add a new language (e.g., Japanese):
+
+1. Copy `en.json` → `ja.json`
+2. Translate all values (leave keys unchanged)
+3. Add `"ja"` to `AvailableLanguages` in `I18n.cs`
+4. Build — no other code changes needed

@@ -402,7 +402,9 @@ internal static class HookMode
     // ── Default event ──────────────────────────────────────────────────
     private static int HandleDefault(HookData data)
     {
-        ToastService.Show("Claude Code", $"Hook event: {data.HookEventName}");
+        // I18n initialized here on first access
+        var body = I18n.Get("toast.default", data.HookEventName);
+        ToastService.Show("Claude Code", body);
         return 0;
     }
 
