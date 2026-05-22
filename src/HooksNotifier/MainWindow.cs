@@ -165,8 +165,14 @@ internal partial class MainWindow : Form
                     if (doc.RootElement.TryGetProperty("payload", out var cfgPayload))
                     {
                         var key = cfgPayload.GetProperty("key").GetString();
-                        var val = cfgPayload.GetProperty("enabled").GetBoolean();
-                        if (key != null) HookConfig.SetEnabled(key, val);
+                        var enabled = cfgPayload.GetProperty("enabled").GetBoolean();
+                        if (key != null)
+                        {
+                            if (enabled) HookConfig.Enable(key);
+                            else HookConfig.Disable(key);
+                            // Refresh config UI
+                            PushState("hook_config", HookConfig.GetAllStates());
+                        }
                     }
                     break;
 
