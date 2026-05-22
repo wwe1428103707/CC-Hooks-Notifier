@@ -49,6 +49,10 @@ Source: "bin\hooks-notifier.runtimeconfig.json"; DestDir: "{app}"; Flags: ignore
 Source: "bin\WinRT.Runtime.dll"; DestDir: "{app}"; Flags: ignoreversion 64bit
 Source: "bin\Microsoft.Windows.SDK.NET.dll"; DestDir: "{app}"; Flags: ignoreversion 64bit
 Source: "bin\hooks-notifier.pdb"; DestDir: "{app}"; Flags: ignoreversion
+; WebView2 assemblies
+Source: "bin\Microsoft.Web.WebView2.Core.dll"; DestDir: "{app}"; Flags: ignoreversion 64bit
+Source: "bin\Microsoft.Web.WebView2.WinForms.dll"; DestDir: "{app}"; Flags: ignoreversion 64bit
+Source: "bin\runtimes\win-x64\native\WebView2Loader.dll"; DestDir: "{app}\runtimes\win-x64\native"; Flags: ignoreversion 64bit
 ; i18n language files
 Source: "bin\i18n\*.json"; DestDir: "{app}\i18n"; Flags: ignoreversion
 ; WebView2 UI (React/shadcn)
