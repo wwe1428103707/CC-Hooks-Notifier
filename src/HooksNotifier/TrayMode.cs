@@ -28,6 +28,11 @@ internal static class TrayMode
     private static string _lastAgentType = "";
     private static string _lastTaskDesc = "";
 
+    // ── Dynamic menu items (updated on each stateful message) ────────
+    private static ToolStripMenuItem? _statusCountItem;
+    private static ToolStripMenuItem? _statusSubagentItem;
+    private static ToolStripMenuItem? _statusTaskItem;
+
     public static int Run()
     {
         // Single instance check
@@ -110,6 +115,7 @@ internal static class TrayMode
                             _lastTaskDesc = msg.EventType;
                             break;
                     }
+                    UpdateStatusMenu();
                     break;
             }
         }, null);
@@ -130,12 +136,38 @@ internal static class TrayMode
         _trayIcon!.Icon = IconHelper.Normal;
     }
 
+    // ── Update dynamic menu items ────────────────────────────────────
+    private static void UpdateStatusMenu()
+    {
+        if (_statusCountItem != null)
+            _statusCountItem.Text = $"Notifications: {_taskCount + _subagentCount}";
+
+        if (_statusSubagentItem != null)
+            _statusSubagentItem.Text = string.IsNullOrEmpty(_lastAgentType)
+                ? "Subagent: IDLE"
+                : $"Subagent: {_lastAgentType}";
+
+        if (_statusTaskItem != null)
+            _statusTaskItem.Text = string.IsNullOrEmpty(_lastTaskDesc)
+                ? "Task: IDLE"
+                : $"Task: {_lastTaskDesc}";
+    }
+
     // ── Context menu ─────────────────────────────────────────────────
     private static ContextMenuStrip BuildMenu()
     {
         var menu = new ContextMenuStrip();
 
         menu.Items.Add(new ToolStripMenuItem("Hooks Notifier — running") { Enabled = false });
+
+        // Dynamic status section
+        _statusCountItem = new ToolStripMenuItem("Notifications: 0") { Enabled = false };
+        _statusSubagentItem = new ToolStripMenuItem("Subagent: IDLE") { Enabled = false };
+        _statusTaskItem = new ToolStripMenuItem("Task: IDLE") { Enabled = false };
+        menu.Items.Add(_statusCountItem);
+        menu.Items.Add(_statusSubagentItem);
+        menu.Items.Add(_statusTaskItem);
+
         menu.Items.Add(new ToolStripSeparator());
 
         var configItem = new ToolStripMenuItem("Configure Hooks");
@@ -145,6 +177,10 @@ internal static class TrayMode
         var updatePathItem = new ToolStripMenuItem("Update Hook Path");
         updatePathItem.Click += (_, _) => AutoConfigureHooks();
         menu.Items.Add(updatePathItem);
+
+        var clearItem = new ToolStripMenuItem("Clear counters");
+        clearItem.Click += (_, _) => { _subagentCount = 0; _taskCount = 0; _lastAgentType = ""; _lastTaskDesc = ""; UpdateStatusMenu(); };
+        menu.Items.Add(clearItem);
 
         var autoStartItem = new ToolStripMenuItem("Open at Login") { CheckOnClick = true };
         autoStartItem.Checked = IsAutoStartEnabled();
