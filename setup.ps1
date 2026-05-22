@@ -187,6 +187,9 @@ function Install-Hooks {
         'StopFailure' = @(
             (New-HookEntry 'StopFailure' '')
         )
+        'PermissionDenied' = @(
+            (New-HookEntry 'PermissionDenied' '')
+        )
     }
 
     $added = @()
