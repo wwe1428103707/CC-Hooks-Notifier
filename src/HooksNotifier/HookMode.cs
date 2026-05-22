@@ -67,16 +67,15 @@ internal static class HookMode
     {
         var eventType = data.HookEventType ?? "";
 
-        var (title, body, blinkType) = eventType switch
+        var title = "Claude Code";
+        var (body, blinkType) = eventType switch
         {
-            "idle_prompt"         => ("Claude Code", "Task complete — ready for your input", "long"),
-            "permission_prompt"   => ("Claude Code — Permission Needed",
-                "Claude is waiting for you to approve a tool call", "long"),
-            "auth_success"        => ("Claude Code", "Authentication successful", "none"),
-            "elicitation_dialog"  => ("Claude Code — MCP Input Requested",
-                "An MCP server needs your input", "none"),
-            "elicitation_complete"=> ("Claude Code", "MCP input submitted", "none"),
-            _                     => ("Claude Code", $"Notification: {eventType}", "none")
+            "idle_prompt"         => (I18n.Get("toast.idle_prompt"), "long"),
+            "permission_prompt"   => (I18n.Get("toast.permission_prompt"), "long"),
+            "auth_success"        => (I18n.Get("toast.auth_success"), "none"),
+            "elicitation_dialog"  => (I18n.Get("toast.elicitation_dialog"), "none"),
+            "elicitation_complete"=> (I18n.Get("toast.elicitation_complete"), "none"),
+            _                     => (I18n.Get("toast.default", eventType), "none")
         };
         return (title, body, blinkType);
     }
@@ -109,20 +108,13 @@ internal static class HookMode
         var eventType = data.HookEventType ?? "unknown";
         var (title, body, blinkType) = eventType switch
         {
-            "rate_limit"            => ("Claude Code — Rate Limited",
-                "API rate limit reached. Claude may retry shortly.", "long"),
-            "server_error"          => ("Claude Code — Server Error",
-                "Claude API encountered a server error.", "long"),
-            "authentication_failed" => ("Claude Code — Auth Failed",
-                "Authentication failed. Check your API credentials.", "long"),
-            "billing_error"         => ("Claude Code — Billing Error",
-                "There is a billing issue with your API account.", "none"),
-            "max_output_tokens"     => ("Claude Code",
-                "Response was truncated (max output tokens reached).", "none"),
-            "model_not_found"       => ("Claude Code",
-                "Requested model is not available.", "none"),
-            _                       => ("Claude Code",
-                $"API error: {eventType}", "none")
+            "rate_limit"            => ("Claude Code", I18n.Get("error.rate_limit"), "long"),
+            "server_error"          => ("Claude Code", I18n.Get("error.server_error"), "long"),
+            "authentication_failed" => ("Claude Code", I18n.Get("error.auth_failed"), "long"),
+            "billing_error"         => ("Claude Code", I18n.Get("error.billing_error"), "none"),
+            "max_output_tokens"     => ("Claude Code", I18n.Get("error.max_tokens"), "none"),
+            "model_not_found"       => ("Claude Code", I18n.Get("error.model_not_found"), "none"),
+            _                       => ("Claude Code", I18n.Get("error.unknown", eventType), "none")
         };
 
         if (TrySendIpc(eventType, title, body, blinkType, "StopFailure"))
@@ -136,13 +128,10 @@ internal static class HookMode
     private static int HandlePermissionDenied(HookData data)
     {
         var toolName = data.ToolName ?? "Unknown";
-        var (title, body, _) = toolName switch
-        {
-            _ when toolName.StartsWith("mcp__") => ("Claude Code",
-                $"MCP tool denied: {toolName[5..]}", "none"),
-            _ => ("Claude Code",
-                $"Tool call denied: {toolName}", "none")
-        };
+        var body = toolName.StartsWith("mcp__")
+            ? I18n.Get("toast.tool_mcp_denied", toolName[5..])
+            : I18n.Get("toast.tool_denied", toolName);
+        var title = "Claude Code";
 
         if (TrySendIpc(null, title, body, "none", "PermissionDenied"))
             return 0;
@@ -162,7 +151,7 @@ internal static class HookMode
             return 0; // No file path to report — skip
 
         var title = "Claude Code";
-        var body = $"Edited: {filePath}";
+        var body = I18n.Get("toast.tool_edited", filePath);
 
         if (TrySendIpc(null, title, body, "none", "PostToolUse"))
             return 0;
@@ -180,8 +169,8 @@ internal static class HookMode
         var title = "Claude Code";
         var body = toolName switch
         {
-            "Bash" => "Command failed — see terminal for details",
-            _      => $"Tool failed: {toolName}"
+            "Bash" => I18n.Get("toast.cmd_failed"),
+            _      => I18n.Get("toast.tool_failed", toolName)
         };
 
         if (TrySendIpc(null, title, body, "none", "PostToolUseFailure"))
@@ -221,7 +210,7 @@ internal static class HookMode
     {
         var agentType = data.HookEventType ?? "unknown";
         var title = "Claude Code";
-        var body = $"Subagent finished: {agentType}";
+        var body = I18n.Get("toast.subagent_finished", agentType);
 
         if (TrySendIpc(null, title, body, "none", "SubagentStop"))
             return 0;
@@ -264,11 +253,11 @@ internal static class HookMode
     {
         var toolName = data.ToolName ?? "Unknown";
 
-        ToastService.Show("Claude Code — Permission Required", $"Tool: {toolName}");
+        ToastService.Show(I18n.Get("dialog.perm_required"), I18n.Get("dialog.tool_label", toolName));
         var decision = ShowPermissionDialog(toolName, data);
         ToastService.Show(
-            "Claude Code — Permission " + (decision.Behavior == "allow" ? "Allowed" : "Denied"),
-            $"Tool: {toolName}");
+            decision.Behavior == "allow" ? I18n.Get("dialog.perm_allowed") : I18n.Get("dialog.perm_denied"),
+            I18n.Get("dialog.tool_label", toolName));
 
         var output = new HookOutput
         {
@@ -286,7 +275,7 @@ internal static class HookMode
     private static int HandleStop(HookData data)
     {
         var title = "Claude Code";
-        var body = "Finished responding";
+        var body = I18n.Get("toast.started");
         if (TrySendIpc(null, title, body, "short", "Stop"))
             return 0;
         ToastService.Show(title, body);
@@ -298,7 +287,7 @@ internal static class HookMode
     {
         var desc = data.HookEventSubtype ?? data.Description ?? "task";
         var title = "Claude Code";
-        var body = $"Task completed: {desc}";
+        var body = I18n.Get("toast.task_completed", desc);
         if (TrySendIpc(null, title, body, "short", "TaskCompleted"))
             return 0;
         ToastService.Show(title, body);
@@ -316,7 +305,7 @@ internal static class HookMode
             _ => "none"
         };
         var title = "Claude Code";
-        var body = blinkType == "short" ? "Session ended" : $"Session: {eventType}";
+        var body = blinkType == "short" ? I18n.Get("toast.session_ended") : I18n.Get("toast.default", $"Session:{eventType}");
         if (TrySendIpc(null, title, body, blinkType, "SessionEnd"))
             return 0;
         ToastService.Show(title, body);
@@ -333,7 +322,7 @@ internal static class HookMode
             case "startup":
             case "resume":
                 var title = "Claude Code";
-                var body = eventType == "startup" ? "Session started" : "Session resumed";
+                var body = eventType == "startup" ? I18n.Get("toast.session_started") : I18n.Get("toast.session_resumed");
                 if (!TrySendIpc(null, title, body, "none", "SessionStart"))
                     ToastService.Show(title, body);
                 break;
@@ -359,7 +348,7 @@ internal static class HookMode
     {
         var eventType = data.HookEventType ?? "auto";
         var title = "Claude Code";
-        var body = "Context compaction complete";
+        var body = I18n.Get("toast.context_compacted");
         if (TrySendIpc(null, title, body, "none", "PostCompact"))
             return 0;
         ToastService.Show(title, body);
@@ -378,20 +367,10 @@ internal static class HookMode
             filePath = el.GetString() ?? "";
         }
 
-        var sourceLabel = source switch
-        {
-            "user_settings"   => "User settings",
-            "project_settings"=> "Project settings",
-            "local_settings"  => "Local settings",
-            "policy_settings" => "Policy settings",
-            "skills"          => "Skills config",
-            _                 => $"Config: {source}"
-        };
-
         var title = "Claude Code";
         var body = string.IsNullOrEmpty(filePath)
-            ? $"{sourceLabel} modified"
-            : $"{sourceLabel}: {Path.GetFileName(filePath)}";
+            ? I18n.Get("toast.config_modified", source)
+            : I18n.Get("toast.config_file_modified", source, Path.GetFileName(filePath));
 
         if (TrySendIpc(null, title, body, "none", "ConfigChange"))
             return 0;
@@ -467,7 +446,7 @@ internal static class HookMode
 
         using var form = new Form
         {
-            Text = "Claude Code — Permission Request",
+            Text = I18n.Get("dialog.perm_required"),
             Size = new Size(520, 330),
             StartPosition = FormStartPosition.CenterScreen,
             TopMost = true,
@@ -480,7 +459,7 @@ internal static class HookMode
 
         form.Controls.Add(new Label
         {
-            Text = "Claude needs authorization",
+            Text = I18n.Get("dialog.perm_title"),
             Font = new Font("Microsoft YaHei UI", 12, FontStyle.Bold),
             ForeColor = Color.FromArgb(33, 37, 41),
             Location = new Point(20, 16),
@@ -489,7 +468,7 @@ internal static class HookMode
 
         form.Controls.Add(new Label
         {
-            Text = $"Tool:  {toolName}",
+            Text = I18n.Get("dialog.tool_label", toolName),
             Font = new Font("Consolas", 10, FontStyle.Bold),
             ForeColor = Color.FromArgb(67, 97, 238),
             Location = new Point(20, 50),
@@ -517,7 +496,7 @@ internal static class HookMode
             Size = new Size(470, 140),
             BackColor = Color.White,
             BorderStyle = BorderStyle.FixedSingle,
-            Text = detailLines.Count > 0 ? string.Join("\r\n", detailLines) : "(no details)",
+            Text = detailLines.Count > 0 ? string.Join("\r\n", detailLines) : I18n.Get("dialog.no_details"),
             TabStop = false
         });
 
@@ -532,7 +511,7 @@ internal static class HookMode
 
         var btnDeny = new Button
         {
-            Text = "Deny", Location = new Point(410, 12), Size = new Size(85, 28),
+            Text = I18n.Get("dialog.deny"), Location = new Point(410, 12), Size = new Size(85, 28),
             FlatStyle = FlatStyle.Flat, BackColor = Color.White,
             ForeColor = Color.FromArgb(220, 53, 69),
             DialogResult = DialogResult.No, TabIndex = 2
@@ -542,7 +521,7 @@ internal static class HookMode
 
         var btnAllow = new Button
         {
-            Text = "Allow", Location = new Point(310, 12), Size = new Size(85, 28),
+            Text = I18n.Get("dialog.allow"), Location = new Point(310, 12), Size = new Size(85, 28),
             FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(67, 97, 238),
             ForeColor = Color.White, DialogResult = DialogResult.Yes, TabIndex = 0
         };
