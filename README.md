@@ -1,3 +1,7 @@
+<p align="right">
+  <a href="README_ZH.md">中文</a>
+</p>
+
 <div align="center">
   <img src="https://raw.githubusercontent.com/wwe1428103707/CC-Hooks-Notifier/master/icon.png" alt="Tray icon" width="48" style="vertical-align: middle; margin-right: 8px;"/>
   <h1 style="display: inline-block; vertical-align: middle;">Claude Code Hooks Notifier</h1>
@@ -155,12 +159,6 @@ The tray icon context menu includes a "Dashboard" option that opens a WebView2 w
 ├── setup.ps1                  # Configuration script
 └── publish.ps1                # Build helper
 ```
-
-## Contributors
-
-Thanks to the following people who have contributed to this project:
-
-- [@wwe1428103707](https://github.com/wwe1428103707) — project creator and maintainer
 
 ## License
 
