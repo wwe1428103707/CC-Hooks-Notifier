@@ -223,6 +223,9 @@ function Install-Hooks {
         'PostCompact' = @(
             (New-HookEntry 'PostCompact' '')
         )
+        'ConfigChange' = @(
+            (New-HookEntry 'ConfigChange' '')
+        )
     }
 
     $added = @()
