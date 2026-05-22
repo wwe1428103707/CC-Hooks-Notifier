@@ -15,30 +15,6 @@ internal static class IpcService
 
     // ── Client (called from --hook mode) ──────────────────────────────
 
-    /// <summary>
-    /// Send a notification to the tray process. Returns true if sent, false if tray unavailable.
-    /// </summary>
-    public static bool SendNotification(HookData data)
-    {
-        if (data.HookEventName == "PermissionRequest")
-            return false; // Permission dialog needs direct process — skip IPC
-
-        var (title, body) = HookMode.FormatNotification(data);
-
-        var msg = new IpcMessage
-        {
-            Type = "toast",
-            Title = title,
-            Body = body,
-            EventName = data.HookEventName ?? "",
-            EventType = data.HookEventType ?? "",
-            SubType = data.HookEventSubtype ?? "",
-            Blink = data.HookEventName == "Notification"
-        };
-
-        return Send(msg);
-    }
-
     /// <summary>Send an arbitrary IPC message to the tray process.</summary>
     public static bool Send(IpcMessage message)
     {

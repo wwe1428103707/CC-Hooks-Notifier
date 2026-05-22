@@ -24,18 +24,6 @@ internal static class HookMode
 
         if (data?.HookEventName == null) return 0;
 
-        // Try IPC first: send to tray process if running
-        try
-        {
-            var ipcResult = IpcService.SendNotification(data);
-            if (ipcResult) return 0; // Tray handled it (with blink)
-        }
-        catch
-        {
-            // IPC failed — fall through to direct handling
-        }
-
-        // Fallback: handle directly (no tray process)
         return HandleDirect(data);
     }
 
@@ -53,27 +41,52 @@ internal static class HookMode
     // ── Notification event ─────────────────────────────────────────────
     private static int HandleNotification(HookData data)
     {
-        var (title, body) = FormatNotification(data);
+        var (title, body, blinkType) = FormatNotification(data);
+        if (TrySendIpc(data.HookEventType, title, body, blinkType))
+            return 0;
+
         ToastService.Show(title, body);
         return 0;
     }
 
-    public static (string title, string body) FormatNotification(HookData data)
+    public static (string title, string body, string blinkType) FormatNotification(HookData data)
     {
         var eventType = data.HookEventType ?? "";
-        var subType = data.HookEventSubtype ?? "";
 
-        var title = "Claude Code";
-        var body = eventType switch
+        var (title, body, blinkType) = eventType switch
         {
-            "idle_prompt" => "Task complete — ready for your input",
-            "task_start" when !string.IsNullOrEmpty(subType) => $"Task started: {subType}",
-            "task_start" => "Task started",
-            "task_end" when !string.IsNullOrEmpty(subType) => $"Task completed: {subType}",
-            "task_end" => "Task completed",
-            _ => $"Event: {eventType} {subType}".TrimEnd()
+            "idle_prompt"         => ("Claude Code", "Task complete — ready for your input", "long"),
+            "permission_prompt"   => ("Claude Code — Permission Needed",
+                "Claude is waiting for you to approve a tool call", "long"),
+            "auth_success"        => ("Claude Code", "Authentication successful", "none"),
+            "elicitation_dialog"  => ("Claude Code — MCP Input Requested",
+                "An MCP server needs your input", "none"),
+            "elicitation_complete"=> ("Claude Code", "MCP input submitted", "none"),
+            _                     => ("Claude Code", $"Notification: {eventType}", "none")
         };
-        return (title, body);
+        return (title, body, blinkType);
+    }
+
+    /// <summary>Try sending via IPC to tray. Returns true if tray handled it.</summary>
+    private static bool TrySendIpc(string? eventType, string title, string body, string blinkType)
+    {
+        try
+        {
+            var msg = new IpcMessage
+            {
+                Type = "toast",
+                Title = title,
+                Body = body,
+                EventName = "Notification",
+                EventType = eventType ?? "",
+                BlinkType = blinkType
+            };
+            return IpcService.Send(msg);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     // ── Permission request event ───────────────────────────────────────
