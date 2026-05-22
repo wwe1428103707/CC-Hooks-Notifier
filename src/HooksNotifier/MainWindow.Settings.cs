@@ -7,84 +7,111 @@ internal partial class MainWindow
 {
     private TabPage BuildSettingsTab()
     {
-        var page = new TabPage(I18n.Get("tab.settings"));
+        var page = new TabPage(I18n.Get("tab.settings")) { BackColor = BgPage };
         int y = 20;
 
-        // Language
-        AddSectionLabel(page, ref y, I18n.Get("settings.language"));
+        // ── Language ─────────────────────────────────────────────────
+        var langCard = CreateCard(20, y, 440, 60);
+        langCard.Controls.Add(new Label
+        {
+            Text = I18n.Get("settings.language"),
+            Font = new Font("Segoe UI", 9, FontStyle.Bold),
+            ForeColor = TextPrimary,
+            Location = new Point(16, 8),
+            Size = new Size(200, 18)
+        });
         var langCombo = new ComboBox
         {
-            Location = new Point(24, y),
-            Size = new Size(200, 24),
+            Location = new Point(16, 30),
+            Size = new Size(180, 24),
             DropDownStyle = ComboBoxStyle.DropDownList,
             Font = new Font("Segoe UI", 9)
         };
-        var currentLang = I18n.CurrentLanguage;
         foreach (var code in I18n.AvailableLanguages)
         {
             var name = code == "en" ? "English" : "中文";
             langCombo.Items.Add(name);
-            if (code == currentLang) langCombo.SelectedIndex = langCombo.Items.Count - 1;
+            if (code == I18n.CurrentLanguage)
+                langCombo.SelectedIndex = langCombo.Items.Count - 1;
         }
-        var langChanged = false;
         langCombo.SelectedIndexChanged += (_, _) =>
         {
             var code = langCombo.SelectedIndex == 0 ? "en" : "zh";
             I18n.SetLanguage(code);
-            langChanged = true;
             UpdateStatusBar();
         };
-        page.Controls.Add(langCombo);
-        y += 34;
+        langCard.Controls.Add(langCombo);
+        page.Controls.Add(langCard);
 
-        // Auto-start
-        AddSectionLabel(page, ref y, I18n.Get("settings.auto_start"));
-        var autoStartBox = new CheckBox
+        y += 76;
+
+        // ── Auto-start ───────────────────────────────────────────────
+        var autoCard = CreateCard(20, y, 440, 60);
+        autoCard.Controls.Add(new Label
         {
             Text = I18n.Get("settings.auto_start"),
-            Location = new Point(24, y),
-            Size = new Size(300, 24),
+            Font = new Font("Segoe UI", 9, FontStyle.Bold),
+            ForeColor = TextPrimary,
+            Location = new Point(16, 8),
+            Size = new Size(200, 18)
+        });
+        var autoBox = new CheckBox
+        {
+            Text = I18n.Get("settings.auto_start"),
+            Location = new Point(16, 32),
+            Size = new Size(280, 22),
             Checked = IsAutoStartEnabled()
         };
-        autoStartBox.CheckedChanged += (_, _) => ToggleAutoStart(autoStartBox.Checked);
-        page.Controls.Add(autoStartBox);
-        y += 34;
+        autoBox.CheckedChanged += (_, _) => ToggleAutoStart(autoBox.Checked);
+        autoCard.Controls.Add(autoBox);
+        page.Controls.Add(autoCard);
 
-        // Hook path
-        AddSectionLabel(page, ref y, I18n.Get("settings.hook_path"));
+        y += 76;
+
+        // ── Hook path ────────────────────────────────────────────────
+        var pathCard = CreateCard(20, y, 880, 80);
+        pathCard.Controls.Add(new Label
+        {
+            Text = I18n.Get("settings.hook_path"),
+            Font = new Font("Segoe UI", 9, FontStyle.Bold),
+            ForeColor = TextPrimary,
+            Location = new Point(16, 8),
+            Size = new Size(300, 18)
+        });
         var exePath = Environment.ProcessPath ?? "";
         var pathBox = new TextBox
         {
             Text = exePath,
-            Location = new Point(24, y),
-            Size = new Size(600, 24),
-            BackColor = Color.White,
+            Location = new Point(16, 32),
+            Size = new Size(720, 22),
+            BackColor = Color.FromArgb(240, 242, 245),
             BorderStyle = BorderStyle.FixedSingle,
-            ReadOnly = true
+            ReadOnly = true,
+            Font = new Font("Consolas", 9)
         };
-        page.Controls.Add(pathBox);
+        pathCard.Controls.Add(pathBox);
 
         var updateBtn = new Button
         {
             Text = I18n.Get("settings.update"),
-            Location = new Point(634, y - 1),
-            Size = new Size(90, 26),
+            Location = new Point(746, 30),
+            Size = new Size(110, 26),
             FlatStyle = FlatStyle.Flat,
-            BackColor = Color.FromArgb(67, 97, 238),
-            ForeColor = Color.White
+            BackColor = AccentBlue,
+            ForeColor = Color.White,
+            FlatAppearance = { BorderColor = AccentBlue }
         };
         updateBtn.Click += (_, _) => AutoConfigureHooks();
-        page.Controls.Add(updateBtn);
-        y += 34;
+        pathCard.Controls.Add(updateBtn);
 
-        // Open settings file
         var openBtn = new Button
         {
             Text = I18n.Get("settings.open_file"),
-            Location = new Point(24, y),
-            Size = new Size(140, 28),
+            Location = new Point(16, 62),
+            Size = new Size(110, 26),
             FlatStyle = FlatStyle.Flat,
-            BackColor = Color.White
+            BackColor = Color.White,
+            FlatAppearance = { BorderColor = BorderLight }
         };
         openBtn.Click += (_, _) =>
         {
@@ -94,43 +121,12 @@ internal partial class MainWindow
             if (File.Exists(path))
                 Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
         };
-        page.Controls.Add(openBtn);
-
-        // Notify user when language was changed
-        if (langChanged)
-        {
-            var hint = new Label
-            {
-                Text = "Language will fully apply after window restart.",
-                ForeColor = Color.FromArgb(108, 117, 125),
-                Location = new Point(24, y),
-                Size = new Size(400, 20)
-            };
-            page.Controls.Add(hint);
-        }
+        pathCard.Controls.Add(openBtn);
+        page.Controls.Add(pathCard);
 
         return page;
     }
 
-    private static void AddSectionLabel(TabPage page, ref int y, string text)
-    {
-        page.Controls.Add(new Label
-        {
-            Text = text,
-            Font = new Font("Segoe UI", 9, FontStyle.Bold),
-            ForeColor = Color.FromArgb(33, 37, 41),
-            Location = new Point(24, y),
-            Size = new Size(400, 18)
-        });
-        y += 22;
-    }
-
-    private void UpdateStatusBar()
-    {
-        _statusBar.Text = $"  {I18n.Get("dashboard.service_running")}  |  {I18n.Get("settings.language")}: {I18n.CurrentLanguage.ToUpper()}  |  v1.4.0";
-    }
-
-    // Reuse existing auto-start logic from TrayMode
     private const string AutoStartKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
     private const string AutoStartValue = "ClaudeCodeHooksNotifier";
 

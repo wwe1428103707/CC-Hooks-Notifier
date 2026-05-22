@@ -4,78 +4,103 @@ internal partial class MainWindow
 {
     private TabPage BuildAboutTab()
     {
-        var page = new TabPage(I18n.Get("tab.about"));
-        var gray = Color.FromArgb(108, 117, 125);
+        var page = new TabPage(I18n.Get("tab.about")) { BackColor = BgPage };
 
-        page.Controls.Add(new Label
+        var card = CreateCard(20, 20, 880, 540);
+        int y = 24;
+
+        // App icon + name
+        card.Controls.Add(new Label
         {
-            Text = I18n.Get("about.title"),
-            Font = new Font("Segoe UI", 16, FontStyle.Bold),
-            ForeColor = Color.FromArgb(33, 37, 41),
-            Location = new Point(24, 24),
-            Size = new Size(500, 36)
+            Text = "⚡",
+            Font = new Font("Segoe UI", 36),
+            Location = new Point(24, y),
+            Size = new Size(60, 50),
+            TextAlign = ContentAlignment.MiddleCenter
         });
 
-        page.Controls.Add(new Label
+        card.Controls.Add(new Label
+        {
+            Text = I18n.Get("about.title"),
+            Font = new Font("Segoe UI", 18, FontStyle.Bold),
+            ForeColor = TextPrimary,
+            Location = new Point(92, y),
+            Size = new Size(500, 32)
+        });
+
+        y += 48;
+
+        card.Controls.Add(new Label
         {
             Text = I18n.Get("about.version", "1.4.0"),
             Font = new Font("Segoe UI", 11),
-            ForeColor = gray,
-            Location = new Point(24, 68),
+            ForeColor = TextSecondary,
+            Location = new Point(24, y),
             Size = new Size(500, 24)
         });
+        y += 32;
 
-        page.Controls.Add(new Label
+        card.Controls.Add(new Label
         {
             Text = I18n.Get("about.tech_stack"),
             Font = new Font("Segoe UI", 9),
-            ForeColor = gray,
-            Location = new Point(24, 104),
-            Size = new Size(600, 20)
+            ForeColor = TextSecondary,
+            Location = new Point(24, y),
+            Size = new Size(500, 20)
         });
+        y += 28;
 
-        page.Controls.Add(new Label
+        card.Controls.Add(new Label
         {
-            Text = "Windows system tray notification service for Claude Code hooks.\n" +
-                   "Monitors PermissionRequest, Notification, StopFailure, and more.",
+            Text = "Windows system tray notification service for Claude Code hooks.\nMonitors PermissionRequest, Notification, StopFailure, and more.\nBell icon with P0/P0.5 blinking, P1/P2 stateful tracking.",
             Font = new Font("Segoe UI", 9),
-            ForeColor = Color.FromArgb(33, 37, 41),
-            Location = new Point(24, 140),
-            Size = new Size(600, 40)
+            ForeColor = TextPrimary,
+            Location = new Point(24, y),
+            Size = new Size(600, 56)
         });
 
-        // Hook event coverage summary
-        page.Controls.Add(new Label
+        y += 72;
+
+        // Coverage table
+        card.Controls.Add(new Label
         {
-            Text = "Hook Event Coverage:",
-            Font = new Font("Segoe UI", 10, FontStyle.Bold),
-            ForeColor = Color.FromArgb(33, 37, 41),
-            Location = new Point(24, 200),
-            Size = new Size(400, 20)
+            Text = "Hook Event Coverage",
+            Font = new Font("Segoe UI", 11, FontStyle.Bold),
+            ForeColor = TextPrimary,
+            Location = new Point(24, y),
+            Size = new Size(400, 22)
         });
+        y += 30;
 
         var coverage = new[]
         {
-            "P0 🔔    idle_prompt, permission_prompt, StopFailure (rate_limit|server_error|auth_failed)",
-            "P0.5 🔔  Stop, TaskCompleted, SessionEnd (clear|logout|prompt_input_exit)",
-            "P1 📢    auth_success, elicitation_*, PermissionDenied, PostToolUse, PostToolUseFailure, SubagentStop, SessionStart, PostCompact, ConfigChange",
-            "P2 🟢    SubagentStart, TaskCreated, PreCompact"
+            ("P0 🔔  ", "Long blink (10s)", "idle_prompt, permission_prompt, StopFailure (error)"),
+            ("P0.5 🔔", "Short blink (5s)", "Stop, TaskCompleted, SessionEnd"),
+            ("P1 📢  ", "Toast", "auth_success, elicitation, PermissionDenied, PostToolUse, etc."),
+            ("P2 🟢  ", "Stateful", "SubagentStart, TaskCreated, PreCompact")
         };
 
-        int y = 228;
-        foreach (var line in coverage)
+        // Table header
+        var headerFont = new Font("Segoe UI", 8, FontStyle.Bold);
+        var headerColor = TextSecondary;
+        card.Controls.Add(new Label { Text = "Level", Font = headerFont, ForeColor = headerColor, Location = new Point(24, y), Size = new Size(70, 18) });
+        card.Controls.Add(new Label { Text = "Type", Font = headerFont, ForeColor = headerColor, Location = new Point(100, y), Size = new Size(100, 18) });
+        card.Controls.Add(new Label { Text = "Events", Font = headerFont, ForeColor = headerColor, Location = new Point(206, y), Size = new Size(400, 18) });
+        y += 22;
+
+        // Separator
+        card.Controls.Add(new Label { BorderStyle = BorderStyle.Fixed3D, Location = new Point(24, y), Size = new Size(780, 2), AutoSize = false });
+        y += 10;
+
+        foreach (var (level, type, events) in coverage)
         {
-            page.Controls.Add(new Label
-            {
-                Text = line,
-                Font = new Font("Consolas", 8),
-                ForeColor = Color.FromArgb(73, 80, 87),
-                Location = new Point(24, y),
-                Size = new Size(800, 18)
-            });
-            y += 20;
+            card.Controls.Add(new Label { Text = level, Font = new Font("Consolas", 9), ForeColor = TextPrimary, Location = new Point(24, y), Size = new Size(70, 20) });
+            card.Controls.Add(new Label { Text = type, Font = new Font("Segoe UI", 9), ForeColor = TextSecondary, Location = new Point(100, y), Size = new Size(100, 20) });
+            card.Controls.Add(new Label { Text = events, Font = new Font("Consolas", 8), ForeColor = TextSecondary, Location = new Point(206, y), Size = new Size(600, 20) });
+            y += 22;
         }
 
+        page.Controls.Add(card);
         return page;
     }
 }
