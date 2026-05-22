@@ -34,13 +34,13 @@ param(
 $ProjectRoot = $PSScriptRoot
 
 if ($UseExe) {
-    $HookExe = [System.IO.Path]::Combine($ProjectRoot, 'bin', 'hooks-notifier.exe')
+    $HookExe = [System.IO.Path]::Combine($ProjectRoot, 'bin', 'hooks-notify.exe')
     if (-not (Test-Path $HookExe)) {
-        Write-Error "C# executable not found at: $HookExe`nRun '.\publish.ps1' first, or use PowerShell mode (without -UseExe)."
+        Write-Error "Hook handler not found at: $HookExe`nRun '.\publish.ps1' first."
         exit 1
     }
     $HookCommand = "`"$HookExe`""
-    $HookLabel   = "C# EXE"
+    $HookLabel   = "hooks-notify"
 }
 else {
     $HookScript  = [System.IO.Path]::Combine($ProjectRoot, 'hooks', 'notify.ps1')

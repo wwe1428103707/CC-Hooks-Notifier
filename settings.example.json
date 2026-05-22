@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"D:\\CC Hooks Notifier\\bin\\hooks-notifier.exe\""
+            "command": "\"D:\\CC Hooks Notifier\\bin\\hooks-notify.exe\""
           }
         ]
       }
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"D:\\CC Hooks Notifier\\bin\\hooks-notifier.exe\""
+            "command": "\"D:\\CC Hooks Notifier\\bin\\hooks-notify.exe\""
           }
         ]
       }

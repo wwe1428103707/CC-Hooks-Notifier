@@ -43,6 +43,8 @@ Name: "autostart"; Description: "Start automatically when I log in"; GroupDescri
 
 [Files]
 Source: "bin\hooks-notifier.exe"; DestDir: "{app}"; Flags: ignoreversion 64bit
+Source: "bin\hooks-notify.exe"; DestDir: "{app}"; Flags: ignoreversion 64bit
+Source: "bin\hooks-notify.dll"; DestDir: "{app}"; Flags: ignoreversion 64bit
 Source: "bin\hooks-notifier.dll"; DestDir: "{app}"; Flags: ignoreversion 64bit
 Source: "bin\hooks-notifier.deps.json"; DestDir: "{app}"; Flags: ignoreversion
 Source: "bin\hooks-notifier.runtimeconfig.json"; DestDir: "{app}"; Flags: ignoreversion

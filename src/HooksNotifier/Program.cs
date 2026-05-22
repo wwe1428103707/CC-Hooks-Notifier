@@ -56,10 +56,11 @@ internal static class Program
     /// </summary>
     private static int ConfigureHooks()
     {
-        var exePath = Environment.ProcessPath;
-        if (string.IsNullOrEmpty(exePath))
+        var exeDir = Path.GetDirectoryName(Environment.ProcessPath);
+        var exePath = exeDir != null ? Path.Combine(exeDir, "hooks-notify.exe") : null;
+        if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath))
         {
-            Console.Error.WriteLine("ERROR: Cannot determine executable path.");
+            Console.Error.WriteLine($"ERROR: hooks-notify.exe not found at {exePath}");
             return 1;
         }
 

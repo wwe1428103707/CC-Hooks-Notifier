@@ -24,7 +24,22 @@ if ($result.ExitCode -ne 0) {
     exit $result.ExitCode
 }
 
-# 2. Build setup installer
+# 2. Build & publish hooks-notify (lightweight hook handler)
+Write-Host "=== Building hooks-notify ===" -ForegroundColor Cyan
+$resultNotify = Start-Process -FilePath 'dotnet' -ArgumentList @(
+    'publish',
+    "$Root\src\NotifyHook\NotifyHook.csproj",
+    "--configuration", $Configuration,
+    "--output", "$Root\bin",
+    "--self-contained", "false"
+) -NoNewWindow -Wait -PassThru
+
+if ($resultNotify.ExitCode -ne 0) {
+    Write-Error "hooks-notify build failed (exit $($resultNotify.ExitCode))"
+    exit $resultNotify.ExitCode
+}
+
+# 3. Build setup installer
 Write-Host "=== Building Setup installer ===" -ForegroundColor Cyan
 $result2 = Start-Process -FilePath 'dotnet' -ArgumentList @(
     'publish',

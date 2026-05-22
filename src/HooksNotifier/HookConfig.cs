@@ -71,19 +71,7 @@ internal static class HookConfig
                 foreach (var entry in hookEvent.Value.EnumerateArray())
                 {
                     var matcher = entry.TryGetProperty("matcher", out var m) ? m.GetString() ?? "" : "";
-                    // Check if this entry points to hooks-notifier.exe
-                    var isOurs = false;
-                    if (entry.TryGetProperty("hooks", out var hArray))
-                    {
-                        foreach (var h in hArray.EnumerateArray())
-                        {
-                            if (h.TryGetProperty("command", out var cmd) &&
-                                cmd.GetString()?.Contains("hooks-notifier.exe") == true)
-                            { isOurs = true; break; }
-                        }
-                    }
                     active.Add((hookEvent.Name, matcher));
-                    _ = isOurs; // currently unused but available for future filtering
                 }
             }
         }
@@ -100,7 +88,8 @@ internal static class HookConfig
             var path = SettingsPath;
             var json = File.Exists(path) ? File.ReadAllText(path) : "{}";
             using var doc = JsonDocument.Parse(json);
-            var exe = Environment.ProcessPath ?? "";
+            var dir = Path.GetDirectoryName(Environment.ProcessPath);
+            var exe = dir != null ? Path.Combine(dir, "hooks-notify.exe") : "";
             var cmdValue = $"\"{exe}\"";
 
             using var stream = new MemoryStream();
