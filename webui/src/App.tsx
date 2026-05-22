@@ -120,7 +120,8 @@ function EventLog({ state }: { state: AppState }) {
 }
 
 // ── Settings ───────────────────────────────────────────────────────
-function Settings({ state, onSetLang }: { state: AppState; onSetLang: (code: string) => void }) {
+function Settings({ state, onSetLang, onUpdatePath, onOpenSettings }:
+  { state: AppState; onSetLang: (code: string) => void; onUpdatePath: () => void; onOpenSettings: () => void }) {
   return (
     <div className="p-6 space-y-4 max-w-xl">
       <Card>
@@ -146,13 +147,13 @@ function Settings({ state, onSetLang }: { state: AppState; onSetLang: (code: str
         <CardHeader className="pb-2"><CardTitle className="text-sm">{t("settings.hook_path")}</CardTitle></CardHeader>
         <CardContent className="space-y-2">
           <p className="text-xs font-mono text-muted-foreground break-all">{t("settings.hook_path_placeholder")}</p>
-          <Button variant="outline" size="sm">{t("settings.update_path")}</Button>
+          <Button variant="outline" size="sm" onClick={onUpdatePath}>{t("settings.update_path")}</Button>
         </CardContent>
       </Card>
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm">{t("settings.settings_file")}</CardTitle></CardHeader>
         <CardContent>
-          <Button variant="outline" size="sm">{t("settings.open_file")}</Button>
+          <Button variant="outline" size="sm" onClick={onOpenSettings}>{t("settings.open_file")}</Button>
         </CardContent>
       </Card>
     </div>
@@ -271,7 +272,7 @@ export default function App() {
 
         <TabsContent value="dashboard"><Dashboard state={state} /></TabsContent>
         <TabsContent value="eventlog"><EventLog state={state} /></TabsContent>
-        <TabsContent value="settings"><Settings state={state} onSetLang={setLang} /></TabsContent>
+        <TabsContent value="settings"><Settings state={state} onSetLang={setLang} onUpdatePath={() => sendToCs({ type: "update_hook_path" })} onOpenSettings={() => sendToCs({ type: "open_settings" })} /></TabsContent>
         <TabsContent value="about"><About /></TabsContent>
       </Tabs>
     </div>

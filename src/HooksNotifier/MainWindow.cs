@@ -127,8 +127,44 @@ internal partial class MainWindow : Form
                         PushState("lang_changed", lang);
                     }
                     break;
+
+                case "update_hook_path":
+                    Task.Run(() => RunConfigureHooks());
+                    break;
+
+                case "open_settings":
+                    var settingsPath = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                        ".claude", "settings.json");
+                    if (File.Exists(settingsPath))
+                    {
+                        using var _ = System.Diagnostics.Process.Start(
+                            new System.Diagnostics.ProcessStartInfo(settingsPath)
+                            { UseShellExecute = true });
+                    }
+                    break;
             }
         }
         catch { /* ignore malformed messages */ }
+    }
+
+    private static void RunConfigureHooks()
+    {
+        try
+        {
+            var exe = Environment.ProcessPath;
+            if (string.IsNullOrEmpty(exe)) return;
+            using var proc = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exe, "--configure-hooks")
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardError = true
+            });
+            proc?.WaitForExit(10000);
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"configure-hooks failed: {ex.Message}");
+        }
     }
 }
