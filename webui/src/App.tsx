@@ -14,6 +14,7 @@ interface Feedback { success: boolean; message: string }
 interface AppState {
   counts: Counts; subagentCount: number; taskCount: number
   recentEvents: EventRow[]; allEvents: EventRow[]; language: string
+  hookConfig?: Record<string, boolean>
   _feedback?: Feedback | null
 }
 
@@ -122,8 +123,32 @@ function EventLog({ state }: { state: AppState }) {
 }
 
 // ── Settings ───────────────────────────────────────────────────────
-function Settings({ state, onSetLang, onUpdatePath, onOpenSettings }:
-  { state: AppState; onSetLang: (code: string) => void; onUpdatePath: () => void; onOpenSettings: () => void }) {
+// ── Hook event config (P0/P0.5 default ON, P1/P2 default OFF) ──
+const hookLevels = [
+  { level: "P0 🔔", color: "text-red-600" },
+  { level: "P0.5 🔔", color: "text-orange-500" },
+  { level: "P1 📢", color: "text-blue-600" },
+  { level: "P2 🟢", color: "text-muted-foreground" },
+]
+
+function HookToggle({ label, level, enabled, onChange }: { label: string; level: string; enabled: boolean; onChange: (v: boolean) => void }) {
+  const lvl = hookLevels.find(h => level.startsWith(h.level.slice(0, 2)))
+  return (
+    <div className="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-0">
+      <div className="flex items-center gap-2 text-xs">
+        <span className={lvl?.color || "text-muted-foreground font-mono w-12"}>{level}</span>
+        <span className="text-foreground">{label}</span>
+      </div>
+      <div className={`w-9 h-5 rounded-full cursor-pointer transition-colors ${enabled ? 'bg-green-500' : 'bg-gray-300'}`}
+        onClick={() => onChange(!enabled)}>
+        <div className={`w-4 h-4 bg-white rounded-full shadow-sm mt-0.5 transition-transform ${enabled ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+      </div>
+    </div>
+  )
+}
+
+function Settings({ state, onSetLang, onUpdatePath, onOpenSettings, onToggleHook }:
+  { state: AppState; onSetLang: (code: string) => void; onUpdatePath: () => void; onOpenSettings: () => void; onToggleHook: (key: string, enabled: boolean) => void }) {
   return (
     <div className="p-6 space-y-4 max-w-xl">
       <Card>
@@ -145,6 +170,42 @@ function Settings({ state, onSetLang, onUpdatePath, onOpenSettings }:
           <Switch defaultChecked />
         </CardContent>
       </Card>
+
+      {/* Hook configuration card */}
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-sm">Hook Events</CardTitle></CardHeader>
+        <CardContent>
+          <p className="text-xs text-muted-foreground mb-3">Enable/disable notifications for specific hook events</p>
+          <div className="space-y-0">
+            {state.hookConfig && Object.entries(state.hookConfig).map(([key, enabled]) => {
+              const meta = ({
+                "Notification(idle_prompt)":        ["P0",   "Task complete"],
+                "Notification(permission_prompt)":  ["P0",   "Permission needed"],
+                "StopFailure":                      ["P0",   "API errors"],
+                "Stop":                             ["P0.5", "Responding finished"],
+                "TaskCompleted":                    ["P0.5", "Task completed"],
+                "SessionEnd":                       ["P0.5", "Session ended"],
+                "Notification(auth_success)":       ["P1",   "Auth success"],
+                "Notification(elicitation_dialog)": ["P1",   "MCP input"],
+                "Notification(elicitation_complete)":["P1",  "MCP submitted"],
+                "PermissionDenied":                 ["P1",   "Tool denied"],
+                "PostToolUse":                      ["P1",   "File edited"],
+                "PostToolUseFailure":               ["P1",   "Tool failed"],
+                "SubagentStop":                     ["P1",   "Subagent done"],
+                "SessionStart":                     ["P1",   "Session start"],
+                "PostCompact":                      ["P1",   "Compacted"],
+                "ConfigChange":                     ["P1",   "Config changed"],
+                "SubagentStart":                    ["P2",   "Subagent start"],
+                "TaskCreated":                      ["P2",   "Task created"],
+                "PreCompact":                       ["P2",   "Compacting"],
+              } as Record<string, [string, string]>)
+              const [lvl, desc] = meta[key] || ["", key]
+              return <HookToggle key={key} label={desc} level={lvl} enabled={enabled} onChange={(v) => onToggleHook(key, v)} />
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm">{t("settings.hook_path")}</CardTitle></CardHeader>
         <CardContent className="space-y-2">
@@ -241,6 +302,8 @@ export default function App() {
     } else if (msg.type === "configure_hooks_result") {
       setState(prev => ({ ...prev, _feedback: msg.payload }))
       setTimeout(() => setState(prev => ({ ...prev, _feedback: null })), 4000)
+    } else if (msg.type === "hook_config") {
+      setState(prev => ({ ...prev, hookConfig: msg.payload }))
     }
   }, [])
 
@@ -291,7 +354,7 @@ export default function App() {
 
         <TabsContent value="dashboard"><Dashboard state={state} /></TabsContent>
         <TabsContent value="eventlog"><EventLog state={state} /></TabsContent>
-        <TabsContent value="settings"><Settings state={state} onSetLang={setLang} onUpdatePath={() => sendToCs({ type: "update_hook_path" })} onOpenSettings={() => sendToCs({ type: "open_settings" })} /></TabsContent>
+        <TabsContent value="settings"><Settings state={state} onSetLang={setLang} onUpdatePath={() => sendToCs({ type: "update_hook_path" })} onOpenSettings={() => sendToCs({ type: "open_settings" })} onToggleHook={(key, enabled) => sendToCs({ type: "set_hook_config", payload: { key, enabled } })} /></TabsContent>
         <TabsContent value="about"><About /></TabsContent>
       </Tabs>
     </div>

@@ -102,7 +102,8 @@ internal partial class MainWindow : Form
                 eventName = e.EventName,
                 summary = e.Summary
             }),
-            language = I18n.CurrentLanguage
+            language = I18n.CurrentLanguage,
+            hookConfig = HookConfig.GetAllStates()
         };
     }
 
@@ -154,6 +155,19 @@ internal partial class MainWindow : Form
                             Log.Error($"configure-hooks failed: {ex.Message}");
                         }
                     });
+                    break;
+
+                case "get_hook_config":
+                    PushState("hook_config", HookConfig.GetAllStates());
+                    break;
+
+                case "set_hook_config":
+                    if (doc.RootElement.TryGetProperty("payload", out var cfgPayload))
+                    {
+                        var key = cfgPayload.GetProperty("key").GetString();
+                        var val = cfgPayload.GetProperty("enabled").GetBoolean();
+                        if (key != null) HookConfig.SetEnabled(key, val);
+                    }
                     break;
 
                 case "open_settings":
