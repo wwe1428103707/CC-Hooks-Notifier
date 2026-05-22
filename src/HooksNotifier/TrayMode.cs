@@ -49,8 +49,20 @@ internal static class TrayMode
             return 0; // Another instance is running
 
         ApplicationConfiguration.Initialize();
-        _uiContext = SynchronizationContext.Current; // WindowsForms sync context
+        _uiContext = SynchronizationContext.Current;
         _cts = new CancellationTokenSource();
+
+        // Global exception handlers to prevent silent crashes
+        Application.ThreadException += (_, e) =>
+        {
+            Log.Error($"ThreadException: {e.Exception.Message}");
+            _uiContext?.Post(_ => ToastService.ShowBalloon("Error",
+                $"An unexpected error occurred:\n{e.Exception.Message}"), null);
+        };
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+        {
+            Log.Error($"UnhandledException: {e.ExceptionObject}");
+        };
 
         // ── Build tray icon ──────────────────────────────────────────
         _trayIcon = new NotifyIcon
@@ -70,14 +82,23 @@ internal static class TrayMode
         _trayIcon.DoubleClick += (_, _) =>
         {
             StopBlinking();
-            if (_mainWindow == null || _mainWindow.IsDisposed)
+            try
             {
-                _mainWindow = new MainWindow();
-                _mainWindow.Show();
+                if (_mainWindow == null || _mainWindow.IsDisposed)
+                {
+                    _mainWindow = new MainWindow();
+                    _mainWindow.Show();
+                }
+                else
+                {
+                    _mainWindow.Activate();
+                }
             }
-            else
+            catch (Exception ex)
             {
-                _mainWindow.Activate();
+                Log.Error($"Dashboard window error: {ex.Message}");
+                ToastService.ShowBalloon("Dashboard Error",
+                    $"Could not open dashboard:\n{ex.Message}");
             }
         };
 
