@@ -35,6 +35,7 @@ internal static class HookMode
             "PermissionRequest" => HandlePermissionRequest(data),
             "Notification"      => HandleNotification(data),
             "StopFailure"       => HandleStopFailure(data),
+            "PermissionDenied"  => HandlePermissionDenied(data),
             _                   => HandleDefault(data)
         };
     }
@@ -113,6 +114,25 @@ internal static class HookMode
         };
 
         if (TrySendIpc(eventType, title, body, blinkType, "StopFailure"))
+            return 0;
+
+        ToastService.Show(title, body);
+        return 0;
+    }
+
+    // ── Permission denied event ────────────────────────────────────────
+    private static int HandlePermissionDenied(HookData data)
+    {
+        var toolName = data.ToolName ?? "Unknown";
+        var (title, body, _) = toolName switch
+        {
+            _ when toolName.StartsWith("mcp__") => ("Claude Code",
+                $"MCP tool denied: {toolName[5..]}", "none"),
+            _ => ("Claude Code",
+                $"Tool call denied: {toolName}", "none")
+        };
+
+        if (TrySendIpc(null, title, body, "none", "PermissionDenied"))
             return 0;
 
         ToastService.Show(title, body);
