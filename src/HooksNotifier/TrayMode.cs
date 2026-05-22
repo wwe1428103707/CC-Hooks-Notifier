@@ -49,6 +49,9 @@ internal static class TrayMode
             return 0; // Another instance is running
 
         ApplicationConfiguration.Initialize();
+        // Ensure WindowsFormsSynchronizationContext is installed for UI thread dispatching
+        if (SynchronizationContext.Current == null)
+            SynchronizationContext.SetSynchronizationContext(new WindowsFormsSynchronizationContext());
         _uiContext = SynchronizationContext.Current;
         _cts = new CancellationTokenSource();
 

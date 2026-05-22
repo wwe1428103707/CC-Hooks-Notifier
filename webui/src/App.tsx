@@ -162,7 +162,7 @@ function Dashboard({ state, onToggleHook }: { state: AppState; onToggleHook: (ke
 }
 
 // ── Event Log ──────────────────────────────────────────────────────
-function EventLog({ state }: { state: AppState }) {
+function EventLog({ state, onClearHistory }: { state: AppState; onClearHistory: () => void }) {
   const levelColor = (lvl: string) => {
     switch (lvl) {
       case "P0": return "text-red-600 font-semibold"
@@ -176,7 +176,13 @@ function EventLog({ state }: { state: AppState }) {
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold">{t("event_log.title")}</h2>
-        <p className="text-xs text-muted-foreground">{t("event_log.total", String(state.allEvents.length))}</p>
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-muted-foreground">{t("event_log.total", String(state.allEvents.length))}</p>
+          <button onClick={onClearHistory}
+            className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-100 text-muted-foreground cursor-pointer">
+            {t("event_log.clear")}
+          </button>
+        </div>
       </div>
       <div className="border rounded-lg overflow-hidden">
         <table className="w-full text-xs font-mono">
@@ -378,7 +384,7 @@ export default function App() {
         </div>
 
         <TabsContent value="dashboard"><Dashboard state={state} onToggleHook={(key, v) => sendToCs({ type: "set_hook_config", payload: { key, enabled: v } })} /></TabsContent>
-        <TabsContent value="eventlog"><EventLog state={state} /></TabsContent>
+        <TabsContent value="eventlog"><EventLog state={state} onClearHistory={() => sendToCs({ type: "clear_history" })} /></TabsContent>
         <TabsContent value="settings"><Settings state={state} onSetLang={setLang} onUpdatePath={() => sendToCs({ type: "update_hook_path" })} onOpenSettings={() => sendToCs({ type: "open_settings" })} /></TabsContent>
         <TabsContent value="about"><About /></TabsContent>
       </Tabs>

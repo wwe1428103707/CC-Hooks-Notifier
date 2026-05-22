@@ -176,6 +176,11 @@ internal partial class MainWindow : Form
                     }
                     break;
 
+                case "clear_history":
+                    EventHistory.Clear();
+                    PushState("state_sync", GetCurrentState());
+                    break;
+
                 case "open_settings":
                     var settingsPath = Path.Combine(
                         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),

@@ -120,7 +120,7 @@ sealed class Program
     {
         try
         {
-            using var pipe = new NamedPipeClientStream(".", PipeName, PipeDirection.Out);
+            using var pipe = new NamedPipeClientStream(".", PipeName, PipeDirection.InOut);
             pipe.Connect(500);
             var msg = JsonSerializer.Serialize(new
             {
@@ -134,8 +134,12 @@ sealed class Program
             var buf = Encoding.UTF8.GetBytes(msg + "\n");
             pipe.Write(buf, 0, buf.Length);
             pipe.Flush();
+            // Read response to verify delivery
+            using var reader = new StreamReader(pipe, Encoding.UTF8);
+            reader.ReadLine();
         }
-        catch { /* tray not running — skip history */ }
+        catch (TimeoutException) { /* tray busy — skip */ }
+        catch (FileNotFoundException) { /* tray not running — skip */ }
     }
 
     static (string title, string body) FormatMessage(HookData data)

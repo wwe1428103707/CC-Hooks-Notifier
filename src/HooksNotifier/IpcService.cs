@@ -71,6 +71,8 @@ internal static class IpcService
                     var msg = JsonSerializer.Deserialize<IpcMessage>(line, JsonOpts.Default);
                     if (msg != null)
                     {
+                        // Log receipt for debugging
+                        System.Diagnostics.Debug.WriteLine($"IPC recv: {msg.Type}/{msg.EventName}");
                         onMessage(msg);
                     }
 
