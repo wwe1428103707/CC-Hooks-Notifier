@@ -23,8 +23,8 @@ internal static class HookConfig
         ["Notification(elicitation_dialog)"] = "P1",
         ["Notification(elicitation_complete)"]="P1",
         ["PermissionDenied"]                 = "P1",
-        ["PostToolUse"]                      = "P1",
-        ["PostToolUseFailure"]               = "P1",
+        ["PostToolUse(Edit|Write)"]          = "P1",
+        ["PostToolUseFailure(Bash|Edit)"]    = "P1",
         ["SubagentStop"]                     = "P1",
         ["SessionStart"]                     = "P1",
         ["PostCompact"]                      = "P1",
@@ -91,21 +91,114 @@ internal static class HookConfig
         return active;
     }
 
-    /// <summary>Enable a hook: run --configure-hooks to register all hooks.</summary>
+    /// <summary>Enable a single hook: add its entry to settings.json.</summary>
     public static void Enable(string key)
     {
         try
         {
-            var exe = Environment.ProcessPath;
-            if (string.IsNullOrEmpty(exe)) return;
-            using var proc = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exe, "--configure-hooks")
-            { UseShellExecute = false, CreateNoWindow = true });
-            proc?.WaitForExit(10000);
+            var (eventName, matcher) = ParseKey(key);
+            var path = SettingsPath;
+            var json = File.Exists(path) ? File.ReadAllText(path) : "{}";
+            using var doc = JsonDocument.Parse(json);
+            var exe = Environment.ProcessPath ?? "";
+            var cmdValue = $"\"{exe}\"";
+
+            using var stream = new MemoryStream();
+            using var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true });
+
+            writer.WriteStartObject();
+            bool hooksWritten = false;
+
+            foreach (var prop in doc.RootElement.EnumerateObject())
+            {
+                if (prop.Name == "hooks")
+                {
+                    writer.WritePropertyName("hooks");
+                    writer.WriteStartObject();
+                    hooksWritten = true;
+
+                    bool eventWritten = false;
+                    foreach (var hookEvent in prop.Value.EnumerateObject())
+                    {
+                        if (hookEvent.Name == eventName && !string.IsNullOrEmpty(matcher))
+                        {
+                            // Check if this specific matcher entry already exists
+                            var alreadyExists = false;
+                            foreach (var entry in hookEvent.Value.EnumerateArray())
+                            {
+                                var m = entry.TryGetProperty("matcher", out var mt) ? mt.GetString() ?? "" : "";
+                                if (m == matcher) { alreadyExists = true; break; }
+                            }
+                            if (!alreadyExists)
+                            {
+                                // Add existing entries plus the new one
+                                writer.WritePropertyName(hookEvent.Name);
+                                writer.WriteStartArray();
+                                foreach (var entry in hookEvent.Value.EnumerateArray())
+                                    entry.WriteTo(writer);
+                                WriteHookEntry(writer, matcher, cmdValue);
+                                writer.WriteEndArray();
+                                eventWritten = true;
+                                continue;
+                            }
+                        }
+                        writer.WritePropertyName(hookEvent.Name);
+                        hookEvent.Value.WriteTo(writer);
+                        if (hookEvent.Name == eventName) eventWritten = true;
+                    }
+
+                    // Add new event group if it doesn't exist
+                    if (!eventWritten)
+                    {
+                        writer.WritePropertyName(eventName);
+                        writer.WriteStartArray();
+                        WriteHookEntry(writer, matcher, cmdValue);
+                        writer.WriteEndArray();
+                    }
+
+                    writer.WriteEndObject();
+                }
+                else
+                {
+                    writer.WritePropertyName(prop.Name);
+                    prop.Value.WriteTo(writer);
+                }
+            }
+
+            if (!hooksWritten)
+            {
+                writer.WritePropertyName("hooks");
+                writer.WriteStartObject();
+                writer.WritePropertyName(eventName);
+                writer.WriteStartArray();
+                WriteHookEntry(writer, matcher, cmdValue);
+                writer.WriteEndArray();
+                writer.WriteEndObject();
+            }
+
+            writer.WriteEndObject();
+            writer.Flush();
+            File.WriteAllText(path, Encoding.UTF8.GetString(stream.ToArray()));
         }
         catch { }
     }
 
-    /// <summary>Disable a hook: remove it from settings.json.</summary>
+    /// <summary>Write a single hook entry (matcher + command).</summary>
+    private static void WriteHookEntry(Utf8JsonWriter writer, string matcher, string command)
+    {
+        writer.WriteStartObject();
+        writer.WriteString("matcher", matcher);
+        writer.WritePropertyName("hooks");
+        writer.WriteStartArray();
+        writer.WriteStartObject();
+        writer.WriteString("type", "command");
+        writer.WriteString("command", command);
+        writer.WriteEndObject();
+        writer.WriteEndArray();
+        writer.WriteEndObject();
+    }
+
+    /// <summary>Disable a hook: remove its entry from settings.json.</summary>
     public static void Disable(string key)
     {
         try
@@ -130,7 +223,6 @@ internal static class HookConfig
                     {
                         if (hookEvent.Name == eventName)
                         {
-                            // Filter out entries matching our matcher
                             var remaining = new List<JsonElement>();
                             foreach (var entry in hookEvent.Value.EnumerateArray())
                             {
