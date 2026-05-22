@@ -67,6 +67,10 @@ internal static class TrayMode
             Log.Error($"UnhandledException: {e.ExceptionObject}");
         };
 
+        // Point IconHelper to the icon file
+        var exeDir = Path.GetDirectoryName(Environment.ProcessPath);
+        if (exeDir != null) IconHelper.SetPath(exeDir);
+
         // ── Build tray icon ──────────────────────────────────────────
         _trayIcon = new NotifyIcon
         {
@@ -154,8 +158,9 @@ internal static class TrayMode
                         StartBlinking(ticks);
 
                     // Record event history
-                    var entry = new EventEntry(DateTime.Now, level, msg.EventName,
-                        string.IsNullOrEmpty(msg.Body) ? msg.Title : msg.Body);
+                    var detail = msg.Detail ?? "";
+                    var summary = string.IsNullOrEmpty(msg.Body) ? msg.Title : msg.Body;
+                    var entry = new EventEntry(DateTime.Now, level, msg.EventName, summary, detail);
                     EventHistory.Add(entry);
                     _mainWindow?.PushEvent(entry);
                     break;
@@ -304,7 +309,7 @@ internal static class TrayMode
     {
         ToastService.ShowBalloon(
             I18n.Get("about.title"),
-            I18n.Get("about.version", "1.5.5"));
+            I18n.Get("about.version", "1.11.0"));
     }
 
     /// <summary>Rebuild the entire menu after language switch.</summary>

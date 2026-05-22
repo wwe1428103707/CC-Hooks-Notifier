@@ -7,5 +7,12 @@
     <Nullable>enable</Nullable>
     <RootNamespace>NotifyHook</RootNamespace>
     <AssemblyName>hooks-notify</AssemblyName>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationIcon>icon.ico</ApplicationIcon>
   </PropertyGroup>
+  <ItemGroup>
+    <Content Include="icon.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 </Project>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, Fragment } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { t, setLanguage } from "./i18n"
+import iconBase64 from "./icon_data"
 
 // ── Types ──────────────────────────────────────────────────────────
 interface Counts { total: number; p0: number; p05: number; toast: number; stateful: number }
-interface EventRow { timestamp: string; level: string; eventName: string; summary: string }
+interface EventRow { timestamp: string; level: string; eventName: string; summary: string; detail?: string }
 interface Feedback { success: boolean; message: string }
 interface AppState {
   counts: Counts; subagentCount: number; taskCount: number
@@ -130,11 +131,11 @@ function Dashboard({ state, onToggleHook }: { state: AppState; onToggleHook: (ke
           ) : (
             <div className="space-y-1.5">
               {state.recentEvents.map((e, i) => (
-                <div key={i} className="flex items-center gap-2 text-sm font-mono">
-                  <span>{levelIcon(e.level)}</span>
-                  <span className="text-muted-foreground w-16 shrink-0">[{e.timestamp}]</span>
-                  <Badge variant="outline" className="w-24 shrink-0 font-mono text-xs">{e.eventName}</Badge>
-                  <span className="truncate text-muted-foreground">{e.summary}</span>
+                <div key={i} className="flex items-center gap-2 text-sm font-mono min-w-0">
+                  <span className="shrink-0">{levelIcon(e.level)}</span>
+                  <span className="text-muted-foreground w-14 shrink-0 text-[11px]">[{e.timestamp}]</span>
+                  <Badge variant="outline" className="shrink-0 font-mono text-xs max-w-[160px] truncate">{e.eventName}</Badge>
+                  <span className="flex-1 min-w-0 truncate text-muted-foreground">{e.summary}</span>
                 </div>
               ))}
             </div>
@@ -147,7 +148,7 @@ function Dashboard({ state, onToggleHook }: { state: AppState; onToggleHook: (ke
         <CardHeader className="pb-2"><CardTitle className="text-sm">{t("hooks.title")}</CardTitle></CardHeader>
         <CardContent>
           <p className="text-xs text-muted-foreground mb-3">{t("hooks.subtitle")}</p>
-          <div className="space-y-0">
+          <div className="grid grid-cols-2 gap-x-4">
             {state.hookConfig && Object.entries(state.hookConfig).map(([key, enabled]) => {
               const i18nKey = hookMeta[key]
               const label = i18nKey ? t(i18nKey) : key
@@ -171,6 +172,9 @@ function EventLog({ state, onClearHistory }: { state: AppState; onClearHistory: 
       default: return "text-muted-foreground"
     }
   }
+
+  const [expanded, setExpanded] = useState<number | null>(null)
+  const toggle = (i: number) => setExpanded(expanded === i ? null : i)
 
   return (
     <div className="p-6 space-y-4">
@@ -198,12 +202,26 @@ function EventLog({ state, onClearHistory }: { state: AppState; onClearHistory: 
             {state.allEvents.length === 0 ? (
               <tr><td colSpan={4} className="px-3 py-8 text-center text-muted-foreground">{t("event_log.no_events")}</td></tr>
             ) : state.allEvents.map((e, i) => (
-              <tr key={i} className="border-t hover:bg-muted/30">
-                <td className="px-3 py-1.5 text-muted-foreground">{e.timestamp}</td>
-                <td className={`px-3 py-1.5 ${levelColor(e.level)}`}>{e.level}</td>
-                <td className="px-3 py-1.5">{e.eventName}</td>
-                <td className="px-3 py-1.5 text-muted-foreground truncate max-w-md">{e.summary}</td>
-              </tr>
+              <Fragment key={i}>
+                <tr className="border-t hover:bg-muted/30 cursor-pointer" onClick={() => toggle(i)}>
+                  <td className="px-3 py-1.5 text-muted-foreground">{e.timestamp}</td>
+                  <td className={`px-3 py-1.5 ${levelColor(e.level)}`}>{e.level}</td>
+                  <td className="px-3 py-1.5">{e.eventName}</td>
+                  <td className="px-3 py-1.5 text-muted-foreground truncate max-w-md">
+                    <span className="flex items-center gap-1">
+                      <span className="truncate">{e.summary}</span>
+                      {e.summary.length > 50 && <span className="text-[10px] text-gray-400 shrink-0">{expanded === i ? "▲" : "▸"}</span>}
+                    </span>
+                  </td>
+                </tr>
+                {expanded === i && (
+                  <tr className="bg-gray-50 border-t border-gray-200">
+                    <td colSpan={4} className="px-4 py-3 text-xs text-gray-700 whitespace-pre-wrap break-all leading-relaxed">
+                      {e.detail || e.summary}
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             ))}
           </tbody>
         </table>
@@ -272,10 +290,10 @@ function About() {
     <div className="p-6 max-w-2xl">
       <Card className="p-6 space-y-4">
         <div className="flex items-center gap-3">
-          <span className="text-4xl">⚡</span>
+          <img src={iconBase64} alt="" className="w-10 h-10" />
           <div>
             <h2 className="text-xl font-bold">Claude Code Hooks Notifier</h2>
-            <p className="text-sm text-muted-foreground">{t("about.version", "1.5.5")}</p>
+            <p className="text-sm text-muted-foreground">{t("about.version", "1.11.0")}</p>
           </div>
         </div>
         <p className="text-sm text-muted-foreground">{t("about.tech_stack")}</p>
@@ -307,8 +325,40 @@ function About() {
 }
 
 // ── App Root ────────────────────────────────────────────────────────
+function HelpModal({ onClose }: { onClose: () => void }) {
+  const sections = [
+    { key: "overview", icon: "ℹ️" },
+    { key: "levels", icon: "🔔" },
+    { key: "permission", icon: "🛡️" },
+    { key: "events", icon: "⚙️" },
+    { key: "event_log", icon: "📋" },
+    { key: "arch", icon: "🏗️" },
+    { key: "lang", icon: "🌐" },
+  ]
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 border-b shrink-0">
+          <h2 className="text-lg font-bold">{t("help.title")}</h2>
+          <button onClick={onClose} className="text-2xl leading-none text-gray-400 hover:text-gray-700 cursor-pointer">&times;</button>
+        </div>
+        <div className="overflow-y-auto px-6 py-4 space-y-4">
+          {sections.map(s => (
+            <div key={s.key}>
+              <h3 className="text-sm font-semibold text-gray-800 mb-1">{s.icon} {t(`help.${s.key}`)}</h3>
+              <p className="text-xs text-gray-600 leading-relaxed">{t(`help.${s.key}_desc`)}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
   const [state, setState] = useState<AppState>(defaultState)
+  const [showHelp, setShowHelp] = useState(false)
 
   const handleCsMessage = useCallback((msg: AppState & { type: string; payload: any }) => {
     if (msg.type === "state_sync") {
@@ -369,8 +419,13 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#f5f7fa]">
       <header className="bg-[#212529] text-white h-12 flex items-center px-5 gap-2">
-        <span className="text-lg font-bold">⚡ {t("window.title")}</span>
+        <span className="text-lg font-bold">{t("window.title")}</span>
         <span className="text-xs text-gray-400 pt-0.5">{t("header.version")}</span>
+        <div className="flex-1" />
+        <button onClick={() => setShowHelp(true)}
+          className="text-xs text-gray-300 hover:text-white bg-gray-700 hover:bg-gray-600 px-2.5 py-1 rounded cursor-pointer transition-colors">
+          ? {t("help.button")}
+        </button>
       </header>
 
       <Tabs defaultValue="dashboard" className="w-full">
@@ -388,6 +443,7 @@ export default function App() {
         <TabsContent value="settings"><Settings state={state} onSetLang={setLang} onUpdatePath={() => sendToCs({ type: "update_hook_path" })} onOpenSettings={() => sendToCs({ type: "open_settings" })} /></TabsContent>
         <TabsContent value="about"><About /></TabsContent>
       </Tabs>
+      {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
     </div>
   )
 }

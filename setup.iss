@@ -2,7 +2,7 @@
 ; Compile: ISCC.exe setup.iss
 
 #define MyAppName "Claude Code Hooks Notifier"
-#define MyAppVersion "1.5.5"
+#define MyAppVersion "1.11.0"
 #define MyAppPublisher "Claude Code Hooks Notifier"
 #define MyAppExeName "hooks-notifier.exe"
 
@@ -19,10 +19,10 @@ PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 OutputDir=.
 OutputBaseFilename=ClaudeCodeHooksNotifier-Setup
-; SetupIconFile=铃铛.ico
+SetupIconFile=icon.ico
 Compression=lzma2/max
 SolidCompression=yes
-UninstallDisplayIcon={app}\hooks-notifier.exe
+UninstallDisplayIcon={app}\icon.ico
 UninstallDisplayName={#MyAppName}
 WizardStyle=modern
 WizardSizePercent=120
@@ -42,6 +42,7 @@ chinese.FinishedLabel=安装程序已完成安装 [name]。{newline}{newline}单
 Name: "autostart"; Description: "Start automatically when I log in"; GroupDescription: "Startup options:"
 
 [Files]
+Source: "icon.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "bin\hooks-notifier.exe"; DestDir: "{app}"; Flags: ignoreversion 64bit
 Source: "bin\hooks-notify.exe"; DestDir: "{app}"; Flags: ignoreversion 64bit
 Source: "bin\hooks-notify.dll"; DestDir: "{app}"; Flags: ignoreversion 64bit

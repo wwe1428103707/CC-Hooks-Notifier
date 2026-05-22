@@ -10,7 +10,8 @@ internal static class JsonOpts
     {
         PropertyNameCaseInsensitive = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = false
+        WriteIndented = false,
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
 }
 
@@ -71,6 +72,9 @@ internal sealed record IpcMessage
 
     [JsonPropertyName("body")]
     public string Body { get; init; } = "";
+
+    [JsonPropertyName("detail")]
+    public string Detail { get; init; } = "";
 
     [JsonPropertyName("eventName")]
     public string EventName { get; init; } = "";

@@ -16,6 +16,11 @@ internal partial class MainWindow : Form
         MinimumSize = new Size(960, 640);
         StartPosition = FormStartPosition.CenterScreen;
         BackColor = Color.FromArgb(245, 247, 250);
+        // Set window icon from icon.ico
+        var iconDir = Path.GetDirectoryName(Environment.ProcessPath);
+        var iconFile = iconDir != null ? Path.Combine(iconDir, "icon.ico") : null;
+        if (iconFile != null && File.Exists(iconFile))
+            Icon = new Icon(iconFile);
 
         _webView = new WebView2 { Dock = DockStyle.Fill };
         _webView.CoreWebView2InitializationCompleted += OnWebViewReady;
@@ -66,17 +71,17 @@ internal partial class MainWindow : Form
                 timestamp = entry.Timestamp.ToString("HH:mm:ss"),
                 level = entry.Level,
                 eventName = entry.EventName,
-                summary = entry.Summary
+                summary = entry.Summary,
+                detail = entry.Detail ?? ""
             }
-        }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        }, SharedJsonOpts());
         _webView.CoreWebView2?.PostWebMessageAsJson(json);
     }
 
     public void PushState(string type, object payload)
     {
         if (IsDisposed || !_loaded) return;
-        var json = JsonSerializer.Serialize(new { type, payload },
-            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        var json = JsonSerializer.Serialize(new { type, payload }, SharedJsonOpts());
         _webView.CoreWebView2?.PostWebMessageAsJson(json);
     }
 
@@ -93,14 +98,16 @@ internal partial class MainWindow : Form
                 timestamp = e.Timestamp.ToString("HH:mm:ss"),
                 level = e.Level,
                 eventName = e.EventName,
-                summary = e.Summary
+                summary = e.Summary,
+                detail = e.Detail ?? ""
             }),
             allEvents = EventHistory.Entries.Reverse().Take(100).Select(e => new
             {
                 timestamp = e.Timestamp.ToString("HH:mm:ss"),
                 level = e.Level,
                 eventName = e.EventName,
-                summary = e.Summary
+                summary = e.Summary,
+                detail = e.Detail ?? ""
             }),
             language = I18n.CurrentLanguage,
             hookConfig = HookConfig.GetAllStates()
@@ -197,4 +204,9 @@ internal partial class MainWindow : Form
         catch { /* ignore malformed messages */ }
     }
 
+    private static JsonSerializerOptions SharedJsonOpts() => new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
 }

@@ -4,9 +4,10 @@ namespace HooksNotifier;
 
 internal sealed record EventEntry(
     DateTime Timestamp,
-    string Level,       // "P0", "P0.5", "Toast", "Stateful"
+    string Level,
     string EventName,
-    string Summary
+    string Summary,
+    string Detail = ""
 );
 
 /// <summary>Persistent ring buffer for hook events. Survives process restarts.</summary>
@@ -110,7 +111,11 @@ internal static class EventHistory
                 if (_entries.Count == 0) return;
                 snapshot = new List<EventEntry>(_entries);
             }
-            var json = JsonSerializer.Serialize(snapshot, new JsonSerializerOptions { WriteIndented = false });
+            var json = JsonSerializer.Serialize(snapshot, new JsonSerializerOptions
+            {
+                WriteIndented = false,
+                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            });
             File.WriteAllText(FilePath, json);
         }
         catch (Exception ex)

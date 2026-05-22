@@ -26,5 +26,22 @@ ClaudeCodeHooksNotifier-Setup.exe
 *.log
 notify_error.log
 
-# Temp files
+# Claude Code project config
+.claude/
+
+# Generated icon files (source is icon.png)
+icon.png
+icon.ico
+src/HooksNotifier/icon.ico
+src/NotifyHook/icon.ico
+webui/public/icon.*
+webui/src/icon_data.ts
+webui/src/icon_b64.txt
+
+# Archive (historical planning docs)
+archive/
+
+# Temp / test files
 *.tmp
+test_*.cs
+convert_icon.cs
