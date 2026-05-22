@@ -21,7 +21,8 @@ internal static class Program
     {
         var mode = args.Length > 0 ? args[0] : "--hook";
 
-        if (mode == "--tray")
+        // --tray mode or double-clicked (no args, no stdin) → start tray
+        if (mode == "--tray" || (mode == "--hook" && args.Length == 0 && !Console.IsInputRedirected))
             return TrayMode.Run();
 
         AttachConsole(ATTACH_PARENT_PROCESS);
