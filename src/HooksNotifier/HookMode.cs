@@ -47,6 +47,7 @@ internal static class HookMode
             "SessionStart"       => HandleSessionStart(data),
             "PreCompact"         => HandlePreCompact(data),
             "PostCompact"        => HandlePostCompact(data),
+            "ConfigChange"       => HandleConfigChange(data),
             _                    => HandleDefault(data)
         };
     }
@@ -360,6 +361,39 @@ internal static class HookMode
         var title = "Claude Code";
         var body = "Context compaction complete";
         if (TrySendIpc(null, title, body, "none", "PostCompact"))
+            return 0;
+        ToastService.Show(title, body);
+        return 0;
+    }
+
+    // ── ConfigChange event ────────────────────────────────────────────
+    private static int HandleConfigChange(HookData data)
+    {
+        var source = data.HookEventType ?? "unknown";
+        var filePath = "";
+        if (data.ToolInput != null &&
+            data.ToolInput.TryGetValue("file_path", out var el) &&
+            el.ValueKind == JsonValueKind.String)
+        {
+            filePath = el.GetString() ?? "";
+        }
+
+        var sourceLabel = source switch
+        {
+            "user_settings"   => "User settings",
+            "project_settings"=> "Project settings",
+            "local_settings"  => "Local settings",
+            "policy_settings" => "Policy settings",
+            "skills"          => "Skills config",
+            _                 => $"Config: {source}"
+        };
+
+        var title = "Claude Code";
+        var body = string.IsNullOrEmpty(filePath)
+            ? $"{sourceLabel} modified"
+            : $"{sourceLabel}: {Path.GetFileName(filePath)}";
+
+        if (TrySendIpc(null, title, body, "none", "ConfigChange"))
             return 0;
         ToastService.Show(title, body);
         return 0;
