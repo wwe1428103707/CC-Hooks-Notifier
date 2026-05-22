@@ -10,9 +10,11 @@ import { t, setLanguage } from "./i18n"
 // ── Types ──────────────────────────────────────────────────────────
 interface Counts { total: number; p0: number; p05: number; toast: number; stateful: number }
 interface EventRow { timestamp: string; level: string; eventName: string; summary: string }
+interface Feedback { success: boolean; message: string }
 interface AppState {
   counts: Counts; subagentCount: number; taskCount: number
   recentEvents: EventRow[]; allEvents: EventRow[]; language: string
+  _feedback?: Feedback | null
 }
 
 const defaultState: AppState = {
@@ -122,8 +124,14 @@ function EventLog({ state }: { state: AppState }) {
 // ── Settings ───────────────────────────────────────────────────────
 function Settings({ state, onSetLang, onUpdatePath, onOpenSettings }:
   { state: AppState; onSetLang: (code: string) => void; onUpdatePath: () => void; onOpenSettings: () => void }) {
+  const fb = state._feedback
   return (
     <div className="p-6 space-y-4 max-w-xl">
+      {fb && (
+        <div className={`px-4 py-2 rounded-md text-sm font-medium ${fb.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+          {fb.success ? '✅ ' : '❌ '}{fb.message}
+        </div>
+      )}
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm">{t("settings.language")}</CardTitle></CardHeader>
         <CardContent>
@@ -231,6 +239,9 @@ export default function App() {
       }))
     } else if (msg.type === "lang_changed") {
       setState(prev => ({ ...prev, language: msg.payload }))
+    } else if (msg.type === "configure_hooks_result") {
+      setState(prev => ({ ...prev, _feedback: msg.payload }))
+      setTimeout(() => setState(prev => ({ ...prev, _feedback: null })), 4000)
     }
   }, [])
 

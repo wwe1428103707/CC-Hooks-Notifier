@@ -129,7 +129,31 @@ internal partial class MainWindow : Form
                     break;
 
                 case "update_hook_path":
-                    Task.Run(() => RunConfigureHooks());
+                    Task.Run(async () =>
+                    {
+                        try
+                        {
+                            var exe = Environment.ProcessPath;
+                            if (string.IsNullOrEmpty(exe)) return;
+                            using var proc = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exe, "--configure-hooks")
+                            { UseShellExecute = false, CreateNoWindow = true, RedirectStandardError = true });
+                            if (proc == null) return;
+                            var output = proc.StandardError.ReadToEnd();
+                            proc.WaitForExit(10000);
+                            var success = proc.ExitCode == 0;
+                            BeginInvoke(() => PushState("configure_hooks_result", new
+                            {
+                                success,
+                                message = success
+                                    ? (output?.Replace("ERROR:", "")?.Trim() ?? "Hook path updated")
+                                    : (output?.Replace("ERROR:", "")?.Trim() ?? "Update failed")
+                            }));
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Error($"configure-hooks failed: {ex.Message}");
+                        }
+                    });
                     break;
 
                 case "open_settings":
@@ -148,23 +172,4 @@ internal partial class MainWindow : Form
         catch { /* ignore malformed messages */ }
     }
 
-    private static void RunConfigureHooks()
-    {
-        try
-        {
-            var exe = Environment.ProcessPath;
-            if (string.IsNullOrEmpty(exe)) return;
-            using var proc = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exe, "--configure-hooks")
-            {
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardError = true
-            });
-            proc?.WaitForExit(10000);
-        }
-        catch (Exception ex)
-        {
-            Log.Error($"configure-hooks failed: {ex.Message}");
-        }
-    }
 }
