@@ -130,7 +130,11 @@ internal static class TrayMode
             switch (msg.Type)
             {
                 case "toast":
-                    ToastService.Show(msg.Title, msg.Body);
+                    // hooks-notify.exe already shows the toast when blinkType="none"
+                    var needToast = msg.BlinkType != "none";
+                    if (needToast)
+                        ToastService.Show(msg.Title, msg.Body);
+
                     var level = msg.BlinkType switch
                     {
                         "long"  => "P0",

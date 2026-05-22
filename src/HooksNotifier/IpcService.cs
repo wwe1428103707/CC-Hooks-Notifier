@@ -83,7 +83,8 @@ internal static class IpcService
                 catch (OperationCanceledException) { break; }
                 catch (Exception ex)
                 {
-                    Log.Error($"IPC server: {ex.Message}");
+                    if (!ex.Message.Contains("Pipe is broken"))
+                        Log.Error($"IPC server: {ex.Message}");
                     await Task.Delay(100, ct).ConfigureAwait(false);
                 }
             }

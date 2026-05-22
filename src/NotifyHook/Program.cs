@@ -110,6 +110,32 @@ sealed class Program
         {
             // Silently fail — nothing else we can do without WinForms
         }
+
+        // Also notify tray for event history (best-effort, non-blocking)
+        NotifyTray(data, title, body);
+    }
+
+    /// <summary>Send event to tray for history logging (fire-and-forget).</summary>
+    static void NotifyTray(HookData data, string title, string body)
+    {
+        try
+        {
+            using var pipe = new NamedPipeClientStream(".", PipeName, PipeDirection.Out);
+            pipe.Connect(500);
+            var msg = JsonSerializer.Serialize(new
+            {
+                type = "toast",
+                title,
+                body,
+                eventName = data.HookEventName ?? "",
+                eventType = data.HookEventType ?? "",
+                blinkType = "none"
+            }, JsonOpts.Default);
+            var buf = Encoding.UTF8.GetBytes(msg + "\n");
+            pipe.Write(buf, 0, buf.Length);
+            pipe.Flush();
+        }
+        catch { /* tray not running — skip history */ }
     }
 
     static (string title, string body) FormatMessage(HookData data)
