@@ -205,6 +205,15 @@ function Install-Hooks {
         'TaskCreated' = @(
             (New-HookEntry 'TaskCreated' '')
         )
+        'Stop' = @(
+            (New-HookEntry 'Stop' '')
+        )
+        'TaskCompleted' = @(
+            (New-HookEntry 'TaskCompleted' '')
+        )
+        'SessionEnd' = @(
+            (New-HookEntry 'SessionEnd' '')
+        )
     }
 
     $added = @()
