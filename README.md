@@ -1,8 +1,10 @@
 # Claude Code Hooks Notifier
 
+![Tray icon](https://github.com/wwe1428103707/CC-Hooks-Notifier/main/icon.png)
+
 Windows system tray notification service for [Claude Code](https://claude.ai/code) hooks. Displays WinRT toast notifications for Claude Code events — permission requests, task completions, errors, subagent activity, and more.
 
-![Tray icon](https://github.com/user-attachments/assets/example) <!-- TODO: add screenshot -->
+![AppScreenshot](https://github.com/wwe1428103707/CC-Hooks-Notifier/main/example.png)
 
 ## Features
 
@@ -38,7 +40,7 @@ Two components work together:
 
 ### Option 1: Installer (recommended)
 
-1. Download the latest `ClaudeCodeHooksNotifier-Setup.exe` from [Releases](https://github.com/YOUR_USERNAME/CC-Hooks-Notifier/releases)
+1. Download the latest `ClaudeCodeHooksNotifier-Setup.exe` from [Releases](https://github.com/wwe1428103707/CC-Hooks-Notifier/releases)
 2. Run the installer — it registers the AUMID for toast notifications automatically
 3. Check "Start automatically when I log in" for auto-start
 

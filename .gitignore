@@ -30,7 +30,6 @@ notify_error.log
 .claude/
 
 # Generated icon files (source is icon.png)
-icon.png
 icon.ico
 src/HooksNotifier/icon.ico
 src/NotifyHook/icon.ico
