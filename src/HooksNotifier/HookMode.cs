@@ -35,8 +35,10 @@ internal static class HookMode
             "PermissionRequest" => HandlePermissionRequest(data),
             "Notification"      => HandleNotification(data),
             "StopFailure"       => HandleStopFailure(data),
-            "PermissionDenied"  => HandlePermissionDenied(data),
-            _                   => HandleDefault(data)
+            "PermissionDenied"   => HandlePermissionDenied(data),
+            "PostToolUse"        => HandlePostToolUse(data),
+            "PostToolUseFailure" => HandlePostToolUseFailure(data),
+            _                    => HandleDefault(data)
         };
     }
 
@@ -137,6 +139,63 @@ internal static class HookMode
 
         ToastService.Show(title, body);
         return 0;
+    }
+
+    // ── PostToolUse event ─────────────────────────────────────────────
+    private static int HandlePostToolUse(HookData data)
+    {
+        var toolName = data.ToolName ?? "Unknown";
+        var subType = data.HookEventSubtype ?? "";
+        var filePath = ExtractFilePath(data);
+
+        if (string.IsNullOrEmpty(filePath))
+            return 0; // No file path to report — skip
+
+        var title = "Claude Code";
+        var body = $"Edited: {filePath}";
+
+        if (TrySendIpc(null, title, body, "none", "PostToolUse"))
+            return 0;
+
+        ToastService.Show(title, body);
+        return 0;
+    }
+
+    // ── PostToolUseFailure event ───────────────────────────────────────
+    private static int HandlePostToolUseFailure(HookData data)
+    {
+        var toolName = data.ToolName ?? "Unknown";
+        var subType = data.HookEventSubtype ?? "";
+
+        var title = "Claude Code";
+        var body = toolName switch
+        {
+            "Bash" => "Command failed — see terminal for details",
+            _      => $"Tool failed: {toolName}"
+        };
+
+        if (TrySendIpc(null, title, body, "none", "PostToolUseFailure"))
+            return 0;
+
+        ToastService.Show(title, body);
+        return 0;
+    }
+
+    /// <summary>Extract file_path from tool_input for PostToolUse events.</summary>
+    private static string ExtractFilePath(HookData data)
+    {
+        if (data.ToolInput == null) return "";
+
+        // Try common file path fields
+        foreach (var key in new[] { "file_path", "filePath", "path" })
+        {
+            if (data.ToolInput.TryGetValue(key, out var el) && el.ValueKind == JsonValueKind.String)
+            {
+                var val = el.GetString();
+                if (!string.IsNullOrEmpty(val)) return val;
+            }
+        }
+        return "";
     }
 
     // ── Permission request event ───────────────────────────────────────

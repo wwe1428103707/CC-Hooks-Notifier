@@ -190,6 +190,12 @@ function Install-Hooks {
         'PermissionDenied' = @(
             (New-HookEntry 'PermissionDenied' '')
         )
+        'PostToolUse' = @(
+            (New-HookEntry 'PostToolUse' 'Edit|Write')
+        )
+        'PostToolUseFailure' = @(
+            (New-HookEntry 'PostToolUseFailure' 'Bash|Edit')
+        )
     }
 
     $added = @()
