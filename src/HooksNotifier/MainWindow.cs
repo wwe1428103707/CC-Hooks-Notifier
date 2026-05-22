@@ -1,146 +1,130 @@
+using System.Text.Json;
+using Microsoft.Web.WebView2.WinForms;
+
 namespace HooksNotifier;
 
-/// <summary>Modern dashboard & configuration window inspired by shadcn/ui design.</summary>
+/// <summary>WebView2 host for the React/shadcn UI.</summary>
 internal partial class MainWindow : Form
 {
-    private readonly TabControl _tabControl;
-    private readonly Label _statusBar;
-    private readonly Panel _headerBar;
-
-    // ── Modern color palette ─────────────────────────────────────────
-    private static readonly Color BgPage = Color.FromArgb(245, 247, 250);
-    private static readonly Color BgCard = Color.White;
-    private static readonly Color BgHeader = Color.FromArgb(33, 37, 41);
-    private static readonly Color TextPrimary = Color.FromArgb(33, 37, 41);
-    private static readonly Color TextSecondary = Color.FromArgb(108, 117, 125);
-    private static readonly Color AccentBlue = Color.FromArgb(67, 97, 238);
-    private static readonly Color AccentGreen = Color.FromArgb(47, 158, 68);
-    private static readonly Color AccentRed = Color.FromArgb(220, 53, 69);
-    private static readonly Color AccentOrange = Color.FromArgb(253, 126, 20);
-    private static readonly Color BorderLight = Color.FromArgb(222, 226, 230);
+    private readonly WebView2 _webView;
+    private bool _loaded;
 
     public MainWindow()
     {
-        Text = I18n.Get("window.title");
+        Text = "Claude Code Hooks Notifier";
         Size = new Size(960, 640);
         MinimumSize = new Size(860, 560);
         StartPosition = FormStartPosition.CenterScreen;
-        BackColor = BgPage;
-        Font = new Font("Segoe UI", 9);
+        BackColor = Color.FromArgb(245, 247, 250);
 
-        // ── Header bar ───────────────────────────────────────────────
-        _headerBar = new Panel
-        {
-            Height = 52,
-            Dock = DockStyle.Top,
-            BackColor = BgHeader
-        };
+        _webView = new WebView2 { Dock = DockStyle.Fill };
+        _webView.CoreWebView2InitializationCompleted += OnWebViewReady;
+        Controls.Add(_webView);
 
-        var headerLabel = new Label
-        {
-            Text = "  ⚡  Claude Code Hooks Notifier",
-            ForeColor = Color.White,
-            Font = new Font("Segoe UI", 13, FontStyle.Bold),
-            Location = new Point(16, 12),
-            Size = new Size(400, 30),
-            AutoSize = false
-        };
-        _headerBar.Controls.Add(headerLabel);
-
-        var headerSub = new Label
-        {
-            Text = $"v1.4.0",
-            ForeColor = Color.FromArgb(160, 165, 175),
-            Font = new Font("Segoe UI", 9),
-            Location = new Point(340, 17),
-            Size = new Size(80, 20),
-            AutoSize = false
-        };
-        _headerBar.Controls.Add(headerSub);
-
-        // ── Tab control ──────────────────────────────────────────────
-        _tabControl = new TabControl
-        {
-            Dock = DockStyle.Fill,
-            Padding = new Point(12, 6),
-            Font = new Font("Segoe UI", 9)
-        };
-
-        _tabControl.TabPages.Add(BuildDashboardTab());
-        _tabControl.TabPages.Add(BuildEventLogTab());
-        _tabControl.TabPages.Add(BuildSettingsTab());
-        _tabControl.TabPages.Add(BuildAboutTab());
-
-        // ── Status bar ───────────────────────────────────────────────
-        _statusBar = new Label
-        {
-            Height = 32,
-            Dock = DockStyle.Bottom,
-            BackColor = Color.FromArgb(241, 243, 245),
-            ForeColor = TextSecondary,
-            Font = new Font("Segoe UI", 8),
-            BorderStyle = BorderStyle.FixedSingle,
-            TextAlign = ContentAlignment.MiddleLeft,
-            Padding = new Padding(14, 0, 0, 0),
-            Text = $"    {I18n.Get("dashboard.service_running")}  |  {I18n.Get("settings.language")}: {I18n.CurrentLanguage.ToUpper()}  |  v1.4.0"
-        };
-
-        Controls.Add(_tabControl);
-        Controls.Add(_headerBar);
-        Controls.Add(_statusBar);
+        _webView.EnsureCoreWebView2Async();
     }
 
-    /// <summary>Push a new event entry to the dashboard and event log.</summary>
+    private void OnWebViewReady(object? sender, EventArgs e)
+    {
+        if (_webView.CoreWebView2 == null) return;
+
+        // Serve webui from bin/webui/
+        var webuiPath = Path.Combine(AppContext.BaseDirectory, "webui");
+        if (Directory.Exists(webuiPath))
+        {
+            _webView.CoreWebView2.SetVirtualHostNameToFolderMapping(
+                "app.local", webuiPath,
+                Microsoft.Web.WebView2.Core.CoreWebView2HostResourceAccessKind.DenyCors);
+            _webView.CoreWebView2.Navigate("https://app.local/index.html");
+        }
+        else
+        {
+            // Fallback: dev server
+            _webView.CoreWebView2.Navigate("http://localhost:5173");
+        }
+
+        // Disable right-click and dev tools in release
+        _webView.CoreWebView2.Settings.AreDevToolsEnabled = false;
+        _webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
+
+        // Listen for JS messages
+        _webView.CoreWebView2.WebMessageReceived += OnJsMessage;
+
+        _loaded = true;
+        PushState("state_sync", GetCurrentState());
+    }
+
+    // ── C# → JS ─────────────────────────────────────────────────────
     public void PushEvent(EventEntry entry)
     {
-        if (IsDisposed) return;
-        BeginInvoke(() =>
+        if (IsDisposed || !_loaded) return;
+        var json = JsonSerializer.Serialize(new
         {
-            AddEventToLog(entry);
-            RefreshDashboard();
-        });
+            type = "event_push",
+            payload = new
+            {
+                timestamp = entry.Timestamp.ToString("HH:mm:ss"),
+                level = entry.Level,
+                eventName = entry.EventName,
+                summary = entry.Summary
+            }
+        }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        _webView.CoreWebView2?.PostWebMessageAsJson(json);
     }
 
-    // ── Card helper ─────────────────────────────────────────────────
-    protected static Panel CreateCard(int x, int y, int w, int h)
+    public void PushState(string type, object payload)
     {
-        return new Panel
+        if (IsDisposed || !_loaded) return;
+        var json = JsonSerializer.Serialize(new { type, payload },
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        _webView.CoreWebView2?.PostWebMessageAsJson(json);
+    }
+
+    private object GetCurrentState()
+    {
+        var (total, p0, p05, toast, stateful) = EventHistory.Counts;
+        return new
         {
-            Location = new Point(x, y),
-            Size = new Size(w, h),
-            BackColor = BgCard,
-            BorderStyle = BorderStyle.FixedSingle
+            counts = new { total, p0, p05, toast, stateful },
+            subagentCount = TrayMode.SubagentCount,
+            taskCount = TrayMode.TaskCount,
+            recentEvents = EventHistory.GetRecent(5).Select(e => new
+            {
+                timestamp = e.Timestamp.ToString("HH:mm:ss"),
+                level = e.Level,
+                eventName = e.EventName,
+                summary = e.Summary
+            }),
+            allEvents = EventHistory.Entries.Reverse().Take(100).Select(e => new
+            {
+                timestamp = e.Timestamp.ToString("HH:mm:ss"),
+                level = e.Level,
+                eventName = e.EventName,
+                summary = e.Summary
+            }),
+            language = I18n.CurrentLanguage
         };
     }
 
-    protected static Label CardTitle(string text, int x, int y, int w)
+    // ── JS → C# ─────────────────────────────────────────────────────
+    private void OnJsMessage(object? sender, Microsoft.Web.WebView2.Core.CoreWebView2WebMessageReceivedEventArgs e)
     {
-        return new Label
+        try
         {
-            Text = text,
-            Font = new Font("Segoe UI", 8, FontStyle.Bold),
-            ForeColor = TextSecondary,
-            Location = new Point(x, y),
-            Size = new Size(w, 18),
-            TextAlign = ContentAlignment.MiddleLeft
-        };
-    }
+            var doc = JsonDocument.Parse(e.TryGetWebMessageAsString());
+            var type = doc.RootElement.GetProperty("type").GetString();
 
-    protected static Label CardValue(string text, int x, int y, int w, Color? color = null)
-    {
-        return new Label
-        {
-            Text = text,
-            Font = new Font("Segoe UI", 22, FontStyle.Bold),
-            ForeColor = color ?? TextPrimary,
-            Location = new Point(x, y),
-            Size = new Size(w, 36),
-            TextAlign = ContentAlignment.MiddleLeft
-        };
-    }
-
-    private void UpdateStatusBar()
-    {
-        _statusBar.Text = $"    {I18n.Get("dashboard.service_running")}  |  {I18n.Get("settings.language")}: {I18n.CurrentLanguage.ToUpper()}  |  v1.4.0";
+            switch (type)
+            {
+                case "get_state":
+                    PushState("state_sync", GetCurrentState());
+                    break;
+                case "set_lang":
+                    var lang = doc.RootElement.GetProperty("payload").GetString();
+                    if (lang != null) I18n.SetLanguage(lang);
+                    break;
+            }
+        }
+        catch { /* ignore malformed messages */ }
     }
 }

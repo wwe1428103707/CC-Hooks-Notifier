@@ -51,6 +51,9 @@ Source: "bin\Microsoft.Windows.SDK.NET.dll"; DestDir: "{app}"; Flags: ignorevers
 Source: "bin\hooks-notifier.pdb"; DestDir: "{app}"; Flags: ignoreversion
 ; i18n language files
 Source: "bin\i18n\*.json"; DestDir: "{app}\i18n"; Flags: ignoreversion
+; WebView2 UI (React/shadcn)
+Source: "bin\webui\index.html"; DestDir: "{app}\webui"; Flags: ignoreversion
+Source: "bin\webui\assets\*"; DestDir: "{app}\webui\assets"; Flags: ignoreversion
 ; Support scripts
 Source: "setup.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "hooks\notify.ps1"; DestDir: "{app}\hooks"; Flags: ignoreversion
