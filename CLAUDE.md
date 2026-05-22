@@ -16,13 +16,26 @@ After rebuilding the installer (`ISCC.exe setup.iss`), use these rules:
 | **Minor** | `x.y.z → x.y+1.0` | New features (tray menu items, IPC messages, new modes), non-breaking additions |
 | **Major** | `x.y.z → x+1.0.0` | Breaking changes (CLI flag rename, IPC protocol change, config format change) |
 
-**Version files to update together:**
-- `setup.iss` → `#define MyAppVersion "x.y.z"`
-- `.claude-plugin/plugin.json` → `"version": "x.y.z"`
+**All version files MUST be updated together:** (use `grep -rn` to verify no stale versions remain)
 
-After version bump, always rebuild:
-```
+| File | Field |
+|------|-------|
+| `setup.iss` | `#define MyAppVersion "x.y.z"` |
+| `.claude-plugin/plugin.json` | `"version": "x.y.z"` |
+| `src/HooksNotifier/TrayMode.cs` | `I18n.Get("about.version", "x.y.z")` |
+| `webui/src/App.tsx` | `t("about.version", "x.y.z")` |
+| `webui/src/i18n.ts` | `"header.version": "vx.y.z"` (both en and zh) |
+
+After version bump, always rebuild and verify:
+```powershell
+# Rebuild all components
+cd src\HooksNotifier && dotnet publish --configuration Release --output ..\..\bin --self-contained false
+cd ..\NotifyHook && dotnet publish --configuration Release --output ..\..\bin --self-contained false
+cd ..\..\webui && npm run build
+# Build installer
 "%LocalAppData%\Programs\Inno Setup 6\ISCC.exe" setup.iss
+# Verify no stale versions
+grep -rn '1\.4\.0\|1\.5\.0\|1\.3\.0\|1\.2\.0' --include="*.cs" --include="*.ts" --include="*.tsx" --exclude-dir=node_modules --exclude-dir=obj --exclude-dir=bin .
 ```
 
 ## Build
