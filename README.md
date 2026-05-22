@@ -1,6 +1,6 @@
 # Claude Code Hooks Notifier
 
-![Tray icon](https://raw.githubusercontent.com/wwe1428103707/CC-Hooks-Notifier/master/icon.png)
+<img src="https://raw.githubusercontent.com/wwe1428103707/CC-Hooks-Notifier/master/icon.png" alt="Tray icon" width="64"/>
 
 Windows system tray notification service for [Claude Code](https://claude.ai/code) hooks. Displays WinRT toast notifications for Claude Code events — permission requests, task completions, errors, subagent activity, and more.
 
