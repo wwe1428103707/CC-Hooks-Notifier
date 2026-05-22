@@ -49,17 +49,7 @@ sealed class Program
             switch (data.HookEventName)
             {
                 case "PermissionRequest":
-                    // No interactive dialog — deny by default
-                    var decision = new { behavior = "deny" };
-                    var output = new
-                    {
-                        hookSpecificOutput = new
-                        {
-                            hookEventName = "PermissionRequest",
-                            decision
-                        }
-                    };
-                    Console.WriteLine(JsonSerializer.Serialize(output, JsonOpts.Default));
+                    // Exit 0 without output → normal permission flow applies (user sees dialog)
                     return 0;
 
                 case "Notification":
