@@ -7,171 +7,199 @@
   <h1 style="display: inline-block; vertical-align: middle;">Claude Code Hooks Notifier</h1>
 </div>
 
-Windows system tray notification service for [Claude Code](https://claude.ai/code) hooks. Displays WinRT toast notifications for Claude Code events — permission requests, task completions, errors, subagent activity, and more.
+<p align="center">
+  <b>Never miss a moment from Claude Code.</b><br>
+  <sub>Native Windows toast notifications + QQ-style system tray alerts for your AI coding companion.</sub>
+</p>
+
+<p align="center">
+  <a href="https://github.com/wwe1428103707/CC-Hooks-Notifier/releases"><img src="https://img.shields.io/github/v/release/wwe1428103707/CC-Hooks-Notifier?include_prereleases&label=latest" alt="Release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/wwe1428103707/CC-Hooks-Notifier" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/platform-Windows%2010%2B-blue" alt="Platform">
+  <img src="https://img.shields.io/badge/.NET-9-purple" alt=".NET 9">
+</p>
 
 ![AppScreenshot](https://raw.githubusercontent.com/wwe1428103707/CC-Hooks-Notifier/master/example.png)
 
+---
+
+## What is this?
+
+You are deep in another window — coding, browsing, writing — while Claude Code is churning away in the background. **How do you know when it needs you?**
+
+That is exactly what **CC Hooks Notifier** solves. It sits quietly in your system tray, and the moment Claude Code fires a hook event, it lights up:
+
+- A **native Windows toast** slides in to tell you what happened
+- The **tray icon blinks** like QQ/WeChat — you can't miss it
+- Hover to see **how many unread notifications** are waiting
+- **Single-click** to open the full event dashboard
+
+Think of it as your Claude Code activity monitor. It watches 17 different hook events — from "task is done, come take a look" to "permission needed" to "API error, something broke" — and keeps you in the loop without alt-tabbing back to the terminal.
+
+---
+
 ## Features
 
-- **QQ-style Notification Center** — unread badge in tooltip, persistent blink (icon ↔ blank), hover to see unread count, single-click to open dashboard
-- **WinRT Toast Notifications** — native Windows 10/11 toasts for all hook events
-- **System Tray Icon** — bell icon with appear/disappear blinking animation on new events, context menu with counters
-- **Interactive Permission Dialog** — allow/deny tool calls with "always allow" options
-- **WebView2 Dashboard** — real-time event history with read/unread status, filter tabs, hook toggle controls, settings
-- **17 Hook Events** — covers PermissionRequest, Notification, StopFailure, PostToolUse, SubagentStart/Stop, TaskCreated/Completed, and more
-- **Priority Levels** — P0 (critical, long blink) / P0.5 (important, short blink) / P1 (toast) / P2 (background)
-- **Multi-language** — English and Chinese (简体中文)
-- **Named Pipe IPC** — lightweight hook handler communicates with tray process
-- **Auto-start** — optional login startup via installer
-- **Blink Toggle** — enable/disable icon blinking from the tray menu
+| Category | Highlights |
+|----------|-----------|
+| **Notification Center** | QQ-style icon blinking (appear / disappear), unread count on hover, single-click opens event log |
+| **Toast Notifications** | Native Windows 10/11 toasts — no browser dependency, works even when terminal is minimized |
+| **Permission Dialog** | Interactive popup with Allow / Deny + "Always allow" checkboxes, right when you need it |
+| **Event Dashboard** | WebView2-powered UI — real-time counters, event log with read/unread filters, hook toggle switches |
+| **17 Hook Events** | PermissionRequest, Notification, StopFailure, PostToolUse, SubagentStart/Stop, TaskCreated/Completed, and more |
+| **Priority Levels** | P0 (critical, long blink) / P0.5 (important, short blink) / P1 (toast) / P2 (silent counter) |
+| **Tray Menu** | Quick access to notifications, hook config, language switch, blink toggle, auto-start |
+| **Multi-language** | English & 简体中文 — switch anytime from tray or settings |
+| **Persistence** | Event history survives restarts; unread state saved to disk |
+
+---
 
 ## Architecture
 
-Two components work together:
+Two lightweight executables, one seamless experience:
 
-| Component | File | Description |
-|-----------|------|-------------|
-| **hooks-notify** | `src/NotifyHook/` | Lightweight CLI called by Claude Code hooks. Shows toasts and permission dialogs. Sends events to tray via named pipe. |
-| **hooks-notifier** | `src/HooksNotifier/` | Background tray process (WinForms + WebView2). One instance only (mutex). Shows tray icon, menu, and dashboard UI. |
+```
+Claude Code hooks
+       │
+       ▼
+┌─────────────────┐     Named Pipe IPC      ┌─────────────────────┐
+│  hooks-notify   │ ◄──────────────────────► │  hooks-notifier     │
+│  (CLI handler)  │    JSON, single-line     │  (tray process)     │
+│                 │                          │                     │
+│  • Toast popup  │                          │  • System tray icon │
+│  • Permission   │                          │  • Blink animation  │
+│    dialog       │                          │  • Event history    │
+│  • Fire &       │                          │  • WebView2 UI      │
+│    forget       │                          │  • Single instance  │
+└─────────────────┘                          └─────────────────────┘
+```
 
-**IPC**: Named pipe `\\.\pipe\ClaudeCodeHooks` — JSON single-line, UTF-8.
+---
+
+## Quick Start
+
+### 1. Install
+
+Download the latest installer from [Releases](https://github.com/wwe1428103707/CC-Hooks-Notifier/releases), run it, done. The installer registers everything automatically.
+
+### 2. Configure
+
+```powershell
+.\hooks-notifier.exe --configure-hooks
+```
+
+This wires up `~/.claude/settings.json` so Claude Code talks to the notifier.
+
+### 3. Done
+
+The tray icon appears. Go ahead — Claude Code events will now reach you wherever you are on Windows.
+
+---
 
 ## Requirements
 
-- Windows 10 (build 17763+) or Windows 11
-- [.NET 9 Runtime](https://dotnet.microsoft.com/download/dotnet/9.0) (framework-dependent deployment)
+- **Windows 10** (build 17763+) or **Windows 11**
+- [.NET 9 Runtime](https://dotnet.microsoft.com/download/dotnet/9.0)
 - [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (pre-installed on Windows 11)
 - [Claude Code](https://claude.ai/code)
 
-## Installation
+---
 
-### Option 1: Installer (recommended)
+## How the Notification Center Works
 
-1. Download the latest `ClaudeCodeHooksNotifier-Setup.exe` from [Releases](https://github.com/wwe1428103707/CC-Hooks-Notifier/releases)
-2. Run the installer — it registers the AUMID for toast notifications automatically
-3. Check "Start automatically when I log in" for auto-start
+<p align="center">
+  <b>Event arrives → Icon blinks → Hover shows count → Click to view → All clear</b>
+</p>
 
-### Option 2: Claude Code plugin
+1. A P0 or P0.5 event fires (e.g. "task complete", "permission needed")
+2. The tray bell **blinks** — appear / disappear — just like QQ or WeChat
+3. **Hover** the icon: tooltip says *"3 unread notifications"*
+4. Right-click: the top menu item reads *"View Notifications (3 unread)"*
+5. **Single-click** the tray icon — blinking stops, everything marked read, dashboard opens with new events highlighted
+6. Unread state is **persisted to disk** — restart the app and your unread events are still there
 
-If you use Claude Code's plugin system, install via the plugin configuration.
+---
 
-### Option 3: Build from source
+## Dashboard
+
+| Tab | What you get |
+|-----|-------------|
+| **Dashboard** | At-a-glance counters: total / unread / P0 / toast / subagents / tasks, plus recent events and per-event enable/disable toggles |
+| **Event Log** | Full history table with read/unread highlighting (amber background + colored dot). Filter: All / Unread / P0 / P0.5 / Toast. One-click "Mark All Read". |
+| **Settings** | Language (EN / 中文), auto-start, hook executable path management, open settings.json directly |
+| **About** | Version info and event coverage table |
+
+---
+
+## Hook Event Coverage
+
+| Event | Priority | What triggers it |
+|-------|----------|-----------------|
+| Notification(idle_prompt) | **P0** | Claude finishes a round, ready for your next prompt |
+| Notification(permission_prompt) | **P0** | Claude is blocked waiting for you to approve a tool |
+| StopFailure | **P0** | API error or runtime failure — something went wrong |
+| Stop | **P0.5** | Claude completed a response |
+| TaskCompleted | **P0.5** | A tracked task was completed |
+| SessionEnd | **P0.5** | Session ended (clear / logout / exit) |
+| PermissionRequest | P1 | Claude needs tool permission |
+| PostToolUse(Edit\|Write) | P1 | A file was edited or written |
+| PostToolUseFailure | P1 | A tool call returned an error |
+| SubagentStop | P1 | A subagent finished its work |
+| PermissionDenied | P1 | You denied a tool request |
+| SessionStart | P1 | New session or session resumed |
+| PostCompact | P1 | Context compaction completed |
+| ConfigChange | P1 | Settings were modified |
+| SubagentStart | P2 | A subagent was spawned |
+| TaskCreated | P2 | A new task was created |
+| PreCompact | P2 | Context is about to be compacted |
+
+---
+
+## Build from Source
 
 ```powershell
-# Build React UI
-cd webui
-npm install
-npm run build
-cd ..
+# React UI
+cd webui && npm install && npm run build && cd ..
 
-# Build hooks-notify (lightweight hook handler)
-dotnet publish src\NotifyHook\NotifyHook.csproj --configuration Release --output bin --self-contained false
+# Lightweight hook handler
+dotnet publish src/NotifyHook/NotifyHook.csproj -c Release -o bin --sc false
 
-# Build hooks-notifier (tray + dashboard)
-dotnet publish src\HooksNotifier\HooksNotifier.csproj --configuration Release --output bin --self-contained false
+# Tray + dashboard
+dotnet publish src/HooksNotifier/HooksNotifier.csproj -c Release -o bin --sc false
 
 # (Optional) Build installer
 # "%LocalAppData%\Programs\Inno Setup 6\ISCC.exe" setup.iss
 ```
 
-## Usage
+**Dev prerequisites:** .NET 9 SDK, Node.js 20+, Inno Setup 6 (for installer)
 
-### Modes
+---
 
-| Command | Description |
-|---------|-------------|
-| `hooks-notifier --tray` | Start background tray process (auto-start after install) |
-| `hooks-notifier --hook` | Process a hook event (stdin JSON, stdout JSON). Called by Claude Code. |
-| `hooks-notifier --register` | Register AUMID for WinRT toast notifications |
-| `hooks-notifier --configure-hooks` | Update `~/.claude/settings.json` hook paths to current EXE |
-
-### Setup with Claude Code
-
-After installation, run:
-
-```powershell
-# Auto-configure hooks to use hooks-notify.exe
-.\hooks-notifier.exe --configure-hooks
-```
-
-Or use the included setup script:
-
-```powershell
-.\setup.ps1 -GlobalScope -UseExe
-```
-
-This updates `~/.claude/settings.json` to hook into Claude Code events.
-
-## Hook Events
-
-| Event | Priority | Description |
-|-------|----------|-------------|
-| Notification(idle_prompt) | P0 | Task complete — ready for input |
-| Notification(permission_prompt) | P0 | Claude waiting for approval |
-| StopFailure | P0 | API error or failure |
-| Stop | P0.5 | Claude finished responding |
-| TaskCompleted | P0.5 | Task done |
-| SessionEnd | P0.5 | Session ended |
-| PermissionRequest | P1 | Tool needs permission |
-| PostToolUseFailure | P1 | Tool execution failed |
-| PostToolUse(Edit\|Write) | P1 | File edited/written |
-| SubagentStop | P1 | Subagent finished |
-| PermissionDenied | P1 | Tool call denied |
-| SessionStart | P1 | Session started |
-| SubagentStart | P2 | Subagent created |
-| TaskCreated | P2 | New task created |
-| PreCompact | P2 | Context about to compact |
-
-## Dashboard
-
-Single-click the tray icon or use the context menu to open the WebView2 dashboard:
-
-- **Dashboard** tab — notification/subagent/task/unread counters, recent events, hook event toggle controls
-- **Event Log** tab — full event history with read/unread status (orange highlight + colored dot), filter by All/Unread/P0/P0.5/Toast, mark all read
-- **Settings** tab — language picker, auto-start toggle, hook path management
-- **About** tab — version info, tech stack
-
-## Notification Center
-
-When a P0 or P0.5 event arrives:
-
-1. Tray icon starts blinking (appear/disappear pattern, like QQ/WeChat)
-2. Hover over the icon — tooltip shows unread count (e.g. "3 unread notifications")
-3. Right-click menu shows "View Notifications (N unread)" at the top
-4. Single-click the tray icon — blinking stops, all messages marked read, dashboard opens with unread events highlighted
-5. Unread state persists across restarts (saved in `event_history.json`)
-
-## Development
-
-### Prerequisites
-
-- .NET 9 SDK
-- Node.js 20+
-- Inno Setup 6 (for installer builds)
-
-### Project structure
+## Project Structure
 
 ```
 ├── src/
 │   ├── HooksNotifier/         # Tray app (WinForms + WebView2)
-│   │   ├── TrayMode.cs        # System tray icon and menu
-│   │   ├── MainWindow.cs      # WebView2 dashboard window
-│   │   ├── HookConfig.cs      # Read/write settings.json hooks
+│   │   ├── TrayMode.cs        # System tray icon, blink, context menu
+│   │   ├── MainWindow.cs      # WebView2 dashboard host
+│   │   ├── HookConfig.cs      # ~/.claude/settings.json reader/writer
 │   │   ├── IpcService.cs      # Named pipe IPC server
 │   │   ├── ToastService.cs    # WinRT toast notifications
-│   │   ├── IconHelper.cs      # GDI+ bell icon rendering
-│   │   ├── EventHistory.cs    # In-memory event history
+│   │   ├── IconHelper.cs      # GDI+ bell icon (normal, highlighted, blank)
+│   │   ├── EventHistory.cs    # Persistent ring buffer with unread state
 │   │   ├── Models.cs          # Shared data models
-│   │   └── i18n/              # Language files (en, zh)
-│   └── NotifyHook/            # Lightweight hook handler
-│       └── Program.cs         # Toast + permission dialog + IPC
-├── webui/                     # React + shadcn/ui dashboard
-├── installer/                 # Inno Setup Chinese language pack
-├── setup.iss                  # Inno Setup script
-├── setup.ps1                  # Configuration script
+│   │   └── i18n/              # en.json, zh.json
+│   └── NotifyHook/            # Lightweight CLI hook handler
+│       └── Program.cs         # Toast + permission dialog + IPC client
+├── webui/                     # React 19 + shadcn/ui + Tailwind v4
+├── docs/                      # Requirements, roadmap, interface contract
+├── setup.iss                  # Inno Setup installer script
+├── setup.ps1                  # Configuration helper
 └── publish.ps1                # Build helper
 ```
 
+---
+
 ## License
 
-MIT
+MIT — feel free to use, fork, and contribute.
