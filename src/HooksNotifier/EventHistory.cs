@@ -7,7 +7,8 @@ internal sealed record EventEntry(
     string Level,
     string EventName,
     string Summary,
-    string Detail = ""
+    string Detail = "",
+    bool IsRead = false
 );
 
 /// <summary>Persistent ring buffer for hook events. Survives process restarts.</summary>
@@ -56,6 +57,64 @@ internal static class EventHistory
             _entries.Clear();
         SaveToFile();
         try { if (File.Exists(FilePath)) File.Delete(FilePath); } catch { }
+    }
+
+    public static int UnreadCount
+    {
+        get
+        {
+            lock (_entries)
+            {
+                int n = 0;
+                foreach (var e in _entries)
+                    if (!e.IsRead) n++;
+                return n;
+            }
+        }
+    }
+
+    public static int UnreadCountByLevel(string level)
+    {
+        lock (_entries)
+        {
+            int n = 0;
+            foreach (var e in _entries)
+                if (!e.IsRead && e.Level == level)
+                    n++;
+            return n;
+        }
+    }
+
+    public static void MarkAllRead()
+    {
+        lock (_entries)
+        {
+            for (int i = 0; i < _entries.Count; i++)
+            {
+                if (!_entries[i].IsRead)
+                    _entries[i] = _entries[i] with { IsRead = true };
+            }
+        }
+        SaveToFile();
+    }
+
+    public static void MarkRead(int index)
+    {
+        lock (_entries)
+        {
+            if (index < 0 || index >= _entries.Count) return;
+            if (!_entries[index].IsRead)
+                _entries[index] = _entries[index] with { IsRead = true };
+        }
+        SaveToFile();
+    }
+
+    public static List<EventEntry> GetUnread()
+    {
+        lock (_entries)
+        {
+            return _entries.Where(e => !e.IsRead).ToList();
+        }
     }
 
     public static (int total, int p0, int p05, int toast, int stateful) Counts

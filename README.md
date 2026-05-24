@@ -13,15 +13,17 @@ Windows system tray notification service for [Claude Code](https://claude.ai/cod
 
 ## Features
 
+- **QQ-style Notification Center** — unread badge in tooltip, persistent blink (icon ↔ blank), hover to see unread count, single-click to open dashboard
 - **WinRT Toast Notifications** — native Windows 10/11 toasts for all hook events
-- **System Tray Icon** — bell icon with blinking animation on new events, context menu with counters
+- **System Tray Icon** — bell icon with appear/disappear blinking animation on new events, context menu with counters
 - **Interactive Permission Dialog** — allow/deny tool calls with "always allow" options
-- **WebView2 Dashboard** — real-time event history, hook toggle controls, settings
+- **WebView2 Dashboard** — real-time event history with read/unread status, filter tabs, hook toggle controls, settings
 - **17 Hook Events** — covers PermissionRequest, Notification, StopFailure, PostToolUse, SubagentStart/Stop, TaskCreated/Completed, and more
-- **Priority Levels** — P0 (critical) / P1 (important) / P2 (informational) with different blink behavior
+- **Priority Levels** — P0 (critical, long blink) / P0.5 (important, short blink) / P1 (toast) / P2 (background)
 - **Multi-language** — English and Chinese (简体中文)
 - **Named Pipe IPC** — lightweight hook handler communicates with tray process
 - **Auto-start** — optional login startup via installer
+- **Blink Toggle** — enable/disable icon blinking from the tray menu
 
 ## Architecture
 
@@ -122,12 +124,22 @@ This updates `~/.claude/settings.json` to hook into Claude Code events.
 
 ## Dashboard
 
-The tray icon context menu includes a "Dashboard" option that opens a WebView2 window with:
+Single-click the tray icon or use the context menu to open the WebView2 dashboard:
 
-- **Dashboard** tab — service status, notification/subagent/task counters, recent events
-- **Event Log** tab — full event history with timestamps, level, and content
+- **Dashboard** tab — notification/subagent/task/unread counters, recent events, hook event toggle controls
+- **Event Log** tab — full event history with read/unread status (orange highlight + colored dot), filter by All/Unread/P0/P0.5/Toast, mark all read
 - **Settings** tab — language picker, auto-start toggle, hook path management
-- **About** tab — version info
+- **About** tab — version info, tech stack
+
+## Notification Center
+
+When a P0 or P0.5 event arrives:
+
+1. Tray icon starts blinking (appear/disappear pattern, like QQ/WeChat)
+2. Hover over the icon — tooltip shows unread count (e.g. "3 unread notifications")
+3. Right-click menu shows "View Notifications (N unread)" at the top
+4. Single-click the tray icon — blinking stops, all messages marked read, dashboard opens with unread events highlighted
+5. Unread state persists across restarts (saved in `event_history.json`)
 
 ## Development
 

@@ -40,6 +40,12 @@
   "dialog.perm_allowed": "Claude Code — 已授权",
   "dialog.perm_denied": "Claude Code — 已拒绝",
 
+  "tray.unread": "{0} 条未读通知",
+  "tray.unread_max": "999+ 条未读通知",
+  "tray.unread_title": "{0} — Claude Code Hooks Notifier",
+
+  "menu.view_notifications": "查看通知（{0} 条未读）",
+  "menu.view_notifications_none": "查看通知",
   "menu.running": "Hooks Notifier — 运行中",
   "menu.notifications": "通知数: {0}",
   "menu.subagent": "子代理: {0}",
@@ -48,6 +54,7 @@
   "menu.task_idle": "任务: 空闲",
   "menu.configure_hooks": "配置 Hooks",
   "menu.update_hook_path": "更新 Hook 路径",
+  "menu.blink_notifications": "通知时闪烁图标",
   "menu.clear_counters": "清除计数",
   "menu.open_at_login": "开机自启",
   "menu.language": "语言",

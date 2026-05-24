@@ -12,13 +12,11 @@ internal static class TrayMode
 {
     private const string MutexName = "ClaudeCodeHooksTray";
     private const int BlinkIntervalMs = 500;
-    private const int DefaultBlinkTicks = 20;
 
     private static NotifyIcon? _trayIcon;
     private static System.Windows.Forms.Timer? _blinkTimer;
-    private static int _blinkTick;
-    private static int _maxBlinkTicks = DefaultBlinkTicks;
-    private static bool _isHighlighted;
+    private static bool _isBlank;
+    private static bool _blinkEnabled = true;
     private static CancellationTokenSource? _cts;
     private static SynchronizationContext? _uiContext;
 
@@ -40,6 +38,7 @@ internal static class TrayMode
     private static ToolStripMenuItem? _statusCountItem;
     private static ToolStripMenuItem? _statusSubagentItem;
     private static ToolStripMenuItem? _statusTaskItem;
+    private static ToolStripMenuItem? _unreadMenuItem;
 
     public static int Run()
     {
@@ -67,6 +66,9 @@ internal static class TrayMode
             Log.Error($"UnhandledException: {e.ExceptionObject}");
         };
 
+        // Load blink setting from registry
+        _blinkEnabled = LoadBlinkSetting();
+
         // Point IconHelper to the icon file
         var exeDir = Path.GetDirectoryName(Environment.ProcessPath);
         if (exeDir != null) IconHelper.SetPath(exeDir);
@@ -84,40 +86,19 @@ internal static class TrayMode
         _trayIcon.MouseClick += (_, e) =>
         {
             if (e.Button == MouseButtons.Left)
-                StopBlinking();
+                OpenDashboard();
         };
         _trayIcon.DoubleClick += (_, _) =>
         {
-            StopBlinking();
-            try
-            {
-                if (_mainWindow == null || _mainWindow.IsDisposed)
-                {
-                    _mainWindow = new MainWindow();
-                    _mainWindow.Show();
-                }
-                else
-                {
-                    _mainWindow.Activate();
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"Dashboard window error: {ex.Message}");
-                ToastService.ShowBalloon("Dashboard Error",
-                    $"Could not open dashboard:\n{ex.Message}");
-            }
+            OpenDashboard();
         };
 
         // ── Blink timer ──────────────────────────────────────────────
-        _blinkTimer = new System.Windows.Forms.Timer();
+        _blinkTimer = new System.Windows.Forms.Timer { Interval = BlinkIntervalMs };
         _blinkTimer.Tick += (_, _) =>
         {
-            _isHighlighted = !_isHighlighted;
-            _trayIcon.Icon = _isHighlighted ? IconHelper.Highlighted : IconHelper.Normal;
-            _blinkTick++;
-            if (_blinkTick >= _maxBlinkTicks)
-                StopBlinking();
+            _isBlank = !_isBlank;
+            _trayIcon.Icon = _isBlank ? IconHelper.Blank : IconHelper.Normal;
         };
 
         // ── IPC server ───────────────────────────────────────────────
@@ -137,7 +118,6 @@ internal static class TrayMode
             switch (msg.Type)
             {
                 case "toast":
-                    // hooks-notify.exe already shows the toast when blinkType="none"
                     var needToast = msg.BlinkType != "none";
                     if (needToast)
                         ToastService.Show(msg.Title, msg.Body);
@@ -148,20 +128,21 @@ internal static class TrayMode
                         "short" => "P0.5",
                         _       => "Toast"
                     };
-                    var ticks = msg.BlinkType switch
+                    var shouldBlink = msg.BlinkType switch
                     {
-                        "long"  => 20,
-                        "short" => 10,
-                        _       => 0
+                        "long"  => true,
+                        "short" => true,
+                        _       => false
                     };
-                    if (ticks > 0)
-                        StartBlinking(ticks);
+                    if (shouldBlink)
+                        StartBlinking();
 
-                    // Record event history
                     var detail = msg.Detail ?? "";
                     var summary = string.IsNullOrEmpty(msg.Body) ? msg.Title : msg.Body;
                     var entry = new EventEntry(DateTime.Now, level, msg.EventName, summary, detail);
                     EventHistory.Add(entry);
+                    UpdateTooltip();
+                    UpdateUnreadMenu();
                     _mainWindow?.PushEvent(entry);
                     break;
 
@@ -180,10 +161,11 @@ internal static class TrayMode
                             _lastTaskDesc = msg.EventType;
                             break;
                     }
-                    // Record stateful events
                     var sfx = new EventEntry(DateTime.Now, "Stateful", msg.EventName,
                         string.IsNullOrEmpty(msg.Title) ? $"{msg.EventName}: {msg.EventType}" : msg.Title);
                     EventHistory.Add(sfx);
+                    UpdateTooltip();
+                    UpdateUnreadMenu();
                     _mainWindow?.PushEvent(sfx);
                     UpdateStatusMenu();
                     break;
@@ -192,18 +174,77 @@ internal static class TrayMode
     }
 
     // ── Blinking (UI thread only) ────────────────────────────────────
-    private static void StartBlinking(int maxTicks = 20)
+    private static void StartBlinking()
     {
-        _blinkTick = 0;
-        _maxBlinkTicks = maxTicks;
-        _isHighlighted = false;
+        if (!_blinkEnabled) return;
+        _isBlank = true;
+        _trayIcon!.Icon = IconHelper.Blank;
         _blinkTimer?.Start();
     }
 
     private static void StopBlinking()
     {
         _blinkTimer?.Stop();
-        _trayIcon!.Icon = IconHelper.Normal;
+        _isBlank = false;
+        if (_trayIcon != null)
+            _trayIcon.Icon = IconHelper.Normal;
+    }
+
+    // ── Tooltip with unread count ────────────────────────────────────
+    public static void UpdateTooltip()
+    {
+        if (_trayIcon == null) return;
+        var unread = EventHistory.UnreadCount;
+        if (unread == 0)
+        {
+            _trayIcon.Text = "Claude Code Hooks Notifier";
+        }
+        else
+        {
+            var display = unread > 999 ? "999+" : unread.ToString();
+            var prefix = unread > 999
+                ? I18n.Get("tray.unread_max")
+                : I18n.Get("tray.unread", display);
+            _trayIcon.Text = I18n.Get("tray.unread_title", prefix);
+        }
+    }
+
+    // ── Open dashboard + clear unread ────────────────────────────────
+    private static void OpenDashboard()
+    {
+        StopBlinking();
+        EventHistory.MarkAllRead();
+        UpdateTooltip();
+        UpdateUnreadMenu();
+        try
+        {
+            if (_mainWindow == null || _mainWindow.IsDisposed)
+            {
+                _mainWindow = new MainWindow();
+                _mainWindow.Show();
+            }
+            else
+            {
+                _mainWindow.Activate();
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Dashboard window error: {ex.Message}");
+            ToastService.ShowBalloon("Dashboard Error",
+                $"Could not open dashboard:\n{ex.Message}");
+        }
+    }
+
+    // ── Update unread menu item ─────────────────────────────────────
+    private static void UpdateUnreadMenu()
+    {
+        if (_unreadMenuItem == null) return;
+        var unread = EventHistory.UnreadCount;
+        if (unread == 0)
+            _unreadMenuItem.Text = I18n.Get("menu.view_notifications_none");
+        else
+            _unreadMenuItem.Text = I18n.Get("menu.view_notifications", unread.ToString());
     }
 
     // ── Update dynamic menu items ────────────────────────────────────
@@ -228,6 +269,13 @@ internal static class TrayMode
     {
         var menu = new ContextMenuStrip();
 
+        // View Notifications (with unread count)
+        _unreadMenuItem = new ToolStripMenuItem(I18n.Get("menu.view_notifications_none"));
+        _unreadMenuItem.Click += (_, _) => OpenDashboard();
+        _unreadMenuItem.Font = new Font(_unreadMenuItem.Font, FontStyle.Bold);
+        menu.Items.Add(_unreadMenuItem);
+        menu.Items.Add(new ToolStripSeparator());
+
         menu.Items.Add(new ToolStripMenuItem(I18n.Get("menu.running")) { Enabled = false });
 
         // Dynamic status section
@@ -247,6 +295,11 @@ internal static class TrayMode
         var updatePathItem = new ToolStripMenuItem(I18n.Get("menu.update_hook_path"));
         updatePathItem.Click += (_, _) => AutoConfigureHooks();
         menu.Items.Add(updatePathItem);
+
+        var blinkItem = new ToolStripMenuItem(I18n.Get("menu.blink_notifications")) { CheckOnClick = true };
+        blinkItem.Checked = _blinkEnabled;
+        blinkItem.CheckedChanged += (_, _) => { _blinkEnabled = blinkItem.Checked; SaveBlinkSetting(); };
+        menu.Items.Add(blinkItem);
 
         var clearItem = new ToolStripMenuItem(I18n.Get("menu.clear_counters"));
         clearItem.Click += (_, _) => { _subagentCount = 0; _taskCount = 0; _lastAgentType = ""; _lastTaskDesc = ""; UpdateStatusMenu(); };
@@ -309,7 +362,7 @@ internal static class TrayMode
     {
         ToastService.ShowBalloon(
             I18n.Get("about.title"),
-            I18n.Get("about.version", "1.11.0"));
+            I18n.Get("about.version", "1.12.0-beta.4"));
     }
 
     /// <summary>Rebuild the entire menu after language switch.</summary>
@@ -318,6 +371,31 @@ internal static class TrayMode
         if (_trayIcon == null) return;
         _trayIcon.ContextMenuStrip = BuildMenu();
         UpdateStatusMenu();
+    }
+
+    // ── Blink setting persistence ─────────────────────────────────────
+    private const string BlinkSettingKey = @"Software\ClaudeCode\HooksNotifier";
+    private const string BlinkSettingValue = "BlinkEnabled";
+
+    private static bool LoadBlinkSetting()
+    {
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(BlinkSettingKey);
+            var val = key?.GetValue(BlinkSettingValue);
+            return val == null ? true : (int)val != 0;
+        }
+        catch { return true; }
+    }
+
+    private static void SaveBlinkSetting()
+    {
+        try
+        {
+            using var key = Registry.CurrentUser.CreateSubKey(BlinkSettingKey);
+            key?.SetValue(BlinkSettingValue, _blinkEnabled ? 1 : 0);
+        }
+        catch { }
     }
 
     // ── Auto-start ───────────────────────────────────────────────────

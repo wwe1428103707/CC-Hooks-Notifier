@@ -356,6 +356,7 @@ sealed class Program
         {
             using var pipe = new NamedPipeClientStream(".", PipeName, PipeDirection.InOut);
             pipe.Connect(2000);
+            var blinkType = GetBlinkType(data);
             var msg = JsonSerializer.Serialize(new
             {
                 type = "toast",
@@ -364,7 +365,7 @@ sealed class Program
                 detail,
                 eventName = data.HookEventName ?? "",
                 eventType = data.HookEventType ?? "",
-                blinkType = "none"
+                blinkType
             }, JsonOpts.Default);
             var buf = Encoding.UTF8.GetBytes(msg + "\n");
             pipe.Write(buf, 0, buf.Length);
@@ -375,6 +376,26 @@ sealed class Program
         }
         catch (TimeoutException) { /* tray busy — skip */ }
         catch (FileNotFoundException) { /* tray not running — skip */ }
+    }
+
+    /// <summary>Map hook event to blink type for tray notification.</summary>
+    static string GetBlinkType(HookData data)
+    {
+        return data.HookEventName switch
+        {
+            "StopFailure" => "long",
+            "PermissionRequest" => "long",
+            "Notification" => data.HookEventType switch
+            {
+                "idle_prompt" => "long",
+                "permission_prompt" => "long",
+                _ => "none"
+            },
+            "Stop" => "short",
+            "TaskCompleted" => "short",
+            "SessionEnd" => "short",
+            _ => "none"
+        };
     }
 
     static (string title, string body) FormatMessage(HookData data)

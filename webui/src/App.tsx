@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, Fragment } from "react"
+import { useState, useEffect, useCallback, useMemo, Fragment } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -10,18 +10,19 @@ import iconBase64 from "./icon_data"
 
 // ── Types ──────────────────────────────────────────────────────────
 interface Counts { total: number; p0: number; p05: number; toast: number; stateful: number }
-interface EventRow { timestamp: string; level: string; eventName: string; summary: string; detail?: string }
+interface EventRow { timestamp: string; level: string; eventName: string; summary: string; detail?: string; isRead?: boolean; _idx?: number }
 interface Feedback { success: boolean; message: string }
 interface AppState {
-  counts: Counts; subagentCount: number; taskCount: number
+  counts: Counts; unreadCount: number; subagentCount: number; taskCount: number
   recentEvents: EventRow[]; allEvents: EventRow[]; language: string
   hookConfig?: Record<string, boolean>
+  defaultFilter?: string
   _feedback?: Feedback | null
 }
 
 const defaultState: AppState = {
   counts: { total: 0, p0: 0, p05: 0, toast: 0, stateful: 0 },
-  subagentCount: 0, taskCount: 0, recentEvents: [], allEvents: [], language: "en",
+  unreadCount: 0, subagentCount: 0, taskCount: 0, recentEvents: [], allEvents: [], language: "en",
 }
 
 const isWebView = typeof (window as any).chrome?.webview?.postMessage === "function"
@@ -101,6 +102,7 @@ const hookLevels: Record<string, string> = {
 function Dashboard({ state, onToggleHook }: { state: AppState; onToggleHook: (key: string, v: boolean) => void }) {
   const cards = [
     { title: t("dashboard.notifications"), value: state.counts.total, accent: "border-t-blue-500" },
+    { title: t("dashboard.unread"), value: state.unreadCount ?? 0, accent: "border-t-amber-500" },
     { title: t("dashboard.p0_blinks"), value: state.counts.p0, accent: "border-t-red-500" },
     { title: t("dashboard.toasts"), value: state.counts.toast, accent: "border-t-blue-500" },
     { title: t("dashboard.subagents"), value: state.subagentCount, accent: "border-t-green-500" },
@@ -113,7 +115,7 @@ function Dashboard({ state, onToggleHook }: { state: AppState; onToggleHook: (ke
 
   return (
     <div className="p-6 space-y-6">
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-6 gap-4">
         {cards.map((c, i) => (
           <Card key={i} className={`${c.accent} border-t-3`}>
             <CardHeader className="pb-1 pt-3 px-4">
@@ -163,7 +165,12 @@ function Dashboard({ state, onToggleHook }: { state: AppState; onToggleHook: (ke
 }
 
 // ── Event Log ──────────────────────────────────────────────────────
-function EventLog({ state, onClearHistory }: { state: AppState; onClearHistory: () => void }) {
+function EventLog({ state, onClearHistory, onMarkAllRead, onMarkRead }: {
+  state: AppState
+  onClearHistory: () => void
+  onMarkAllRead: () => void
+  onMarkRead: (idx: number) => void
+}) {
   const levelColor = (lvl: string) => {
     switch (lvl) {
       case "P0": return "text-red-600 font-semibold"
@@ -173,14 +180,50 @@ function EventLog({ state, onClearHistory }: { state: AppState; onClearHistory: 
     }
   }
 
-  const [expanded, setExpanded] = useState<number | null>(null)
-  const toggle = (i: number) => setExpanded(expanded === i ? null : i)
+  const unreadDot = (lvl: string) => {
+    switch (lvl) {
+      case "P0": return "bg-red-500"
+      case "P0.5": return "bg-orange-500"
+      case "Toast": return "bg-blue-500"
+      default: return "bg-gray-400"
+    }
+  }
+
+  const filters = ["all", "unread", "P0", "P0.5", "Toast"]
+  const filterLabels: Record<string, string> = {
+    all: t("event_log.filter_all"),
+    unread: t("event_log.filter_unread"),
+  }
+  const [filter, setFilter] = useState(state.defaultFilter || "all")
+  const [expanded, setExpanded] = useState<string | null>(null)
+  const toggle = (key: string) => setExpanded(expanded === key ? null : key)
+
+  const filteredEvents = useMemo(() => {
+    let list = [...state.allEvents]
+    if (filter === "unread") list = list.filter(e => !e.isRead)
+    else if (filter === "P0") list = list.filter(e => e.level === "P0")
+    else if (filter === "P0.5") list = list.filter(e => e.level === "P0.5")
+    else if (filter === "Toast") list = list.filter(e => e.level === "Toast")
+    // Unread first, then by timestamp descending (natural reverse order)
+    list.sort((a, b) => {
+      if (!a.isRead && b.isRead) return -1
+      if (a.isRead && !b.isRead) return 1
+      return 0
+    })
+    return list
+  }, [state.allEvents, filter])
 
   return (
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold">{t("event_log.title")}</h2>
         <div className="flex items-center gap-2">
+          {(state.unreadCount ?? 0) > 0 && (
+            <button onClick={onMarkAllRead}
+              className="text-xs px-2 py-1 rounded bg-amber-100 hover:bg-amber-200 text-amber-800 font-medium cursor-pointer transition-colors">
+              {t("event_log.mark_all_read")} ({state.unreadCount})
+            </button>
+          )}
           <p className="text-xs text-muted-foreground">{t("event_log.total", String(state.allEvents.length))}</p>
           <button onClick={onClearHistory}
             className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-100 text-muted-foreground cursor-pointer">
@@ -188,6 +231,19 @@ function EventLog({ state, onClearHistory }: { state: AppState; onClearHistory: 
           </button>
         </div>
       </div>
+
+      {/* Filter tabs */}
+      <div className="flex gap-1">
+        {filters.map(f => (
+          <button key={f} onClick={() => setFilter(f)}
+            className={`text-xs px-2.5 py-1 rounded cursor-pointer transition-colors ${
+              filter === f ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}>
+            {filterLabels[f] || f}
+          </button>
+        ))}
+      </div>
+
       <div className="border rounded-lg overflow-hidden">
         <table className="w-full text-xs font-mono">
           <thead>
@@ -199,22 +255,33 @@ function EventLog({ state, onClearHistory }: { state: AppState; onClearHistory: 
             </tr>
           </thead>
           <tbody>
-            {state.allEvents.length === 0 ? (
+            {filteredEvents.length === 0 ? (
               <tr><td colSpan={4} className="px-3 py-8 text-center text-muted-foreground">{t("event_log.no_events")}</td></tr>
-            ) : state.allEvents.map((e, i) => (
-              <Fragment key={i}>
-                <tr className="border-t hover:bg-muted/30 cursor-pointer" onClick={() => toggle(i)}>
-                  <td className="px-3 py-1.5 text-muted-foreground">{e.timestamp}</td>
+            ) : filteredEvents.map((e, i) => {
+              const key = `${e.timestamp}-${e.eventName}-${i}`
+              return (
+              <Fragment key={key}>
+                <tr className={`border-t hover:bg-muted/30 cursor-pointer ${!e.isRead ? 'bg-amber-50' : ''}`}
+                  onClick={() => {
+                    toggle(key)
+                    if (!e.isRead && e._idx != null) onMarkRead(e._idx)
+                  }}>
+                  <td className="px-3 py-1.5 text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      {!e.isRead && <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${unreadDot(e.level)}`} />}
+                      {e.timestamp}
+                    </span>
+                  </td>
                   <td className={`px-3 py-1.5 ${levelColor(e.level)}`}>{e.level}</td>
                   <td className="px-3 py-1.5">{e.eventName}</td>
                   <td className="px-3 py-1.5 text-muted-foreground truncate max-w-md">
                     <span className="flex items-center gap-1">
                       <span className="truncate">{e.summary}</span>
-                      {e.summary.length > 50 && <span className="text-[10px] text-gray-400 shrink-0">{expanded === i ? "▲" : "▸"}</span>}
+                      {e.summary.length > 50 && <span className="text-[10px] text-gray-400 shrink-0">{expanded === key ? "▲" : "▸"}</span>}
                     </span>
                   </td>
                 </tr>
-                {expanded === i && (
+                {expanded === key && (
                   <tr className="bg-gray-50 border-t border-gray-200">
                     <td colSpan={4} className="px-4 py-3 text-xs text-gray-700 whitespace-pre-wrap break-all leading-relaxed">
                       {e.detail || e.summary}
@@ -222,7 +289,7 @@ function EventLog({ state, onClearHistory }: { state: AppState; onClearHistory: 
                   </tr>
                 )}
               </Fragment>
-            ))}
+            )})}
           </tbody>
         </table>
       </div>
@@ -293,7 +360,7 @@ function About() {
           <img src={iconBase64} alt="" className="w-10 h-10" />
           <div>
             <h2 className="text-xl font-bold">Claude Code Hooks Notifier</h2>
-            <p className="text-sm text-muted-foreground">{t("about.version", "1.11.0")}</p>
+            <p className="text-sm text-muted-foreground">{t("about.version", "1.12.0-beta.4")}</p>
           </div>
         </div>
         <p className="text-sm text-muted-foreground">{t("about.tech_stack")}</p>
@@ -367,6 +434,7 @@ export default function App() {
     } else if (msg.type === "event_push") {
       setState(prev => ({
         ...prev,
+        unreadCount: msg.payload.unreadCount ?? (prev.unreadCount + 1),
         recentEvents: [msg.payload, ...prev.recentEvents].slice(0, 5),
         allEvents: [msg.payload, ...prev.allEvents].slice(0, 500),
         counts: {
@@ -439,7 +507,7 @@ export default function App() {
         </div>
 
         <TabsContent value="dashboard"><Dashboard state={state} onToggleHook={(key, v) => sendToCs({ type: "set_hook_config", payload: { key, enabled: v } })} /></TabsContent>
-        <TabsContent value="eventlog"><EventLog state={state} onClearHistory={() => sendToCs({ type: "clear_history" })} /></TabsContent>
+        <TabsContent value="eventlog"><EventLog state={state} onClearHistory={() => sendToCs({ type: "clear_history" })} onMarkAllRead={() => sendToCs({ type: "mark_all_read" })} onMarkRead={(idx) => sendToCs({ type: "mark_read", payload: { index: idx } })} /></TabsContent>
         <TabsContent value="settings"><Settings state={state} onSetLang={setLang} onUpdatePath={() => sendToCs({ type: "update_hook_path" })} onOpenSettings={() => sendToCs({ type: "open_settings" })} /></TabsContent>
         <TabsContent value="about"><About /></TabsContent>
       </Tabs>

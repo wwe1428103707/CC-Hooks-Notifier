@@ -1,7 +1,7 @@
 {
   "name": "hooks-notifier",
   "description": "Windows native toast notifications for Claude Code hooks. Shows system toasts on PermissionRequest and Notification events.",
-  "version": "1.11.0",
+  "version": "1.12.0-beta.4",
   "author": {
     "name": "Claude Code Hooks Notifier"
   },

@@ -72,7 +72,9 @@ internal partial class MainWindow : Form
                 level = entry.Level,
                 eventName = entry.EventName,
                 summary = entry.Summary,
-                detail = entry.Detail ?? ""
+                detail = entry.Detail ?? "",
+                isRead = entry.IsRead,
+                unreadCount = EventHistory.UnreadCount
             }
         }, SharedJsonOpts());
         _webView.CoreWebView2?.PostWebMessageAsJson(json);
@@ -88,27 +90,36 @@ internal partial class MainWindow : Form
     private object GetCurrentState()
     {
         var (total, p0, p05, toast, stateful) = EventHistory.Counts;
+        var entries = EventHistory.Entries;
         return new
         {
             counts = new { total, p0, p05, toast, stateful },
+            unreadCount = EventHistory.UnreadCount,
             subagentCount = TrayMode.SubagentCount,
             taskCount = TrayMode.TaskCount,
-            recentEvents = EventHistory.GetRecent(5).Select(e => new
+            recentEvents = EventHistory.GetRecent(5).Select((e, i) => new
             {
                 timestamp = e.Timestamp.ToString("HH:mm:ss"),
                 level = e.Level,
                 eventName = e.EventName,
                 summary = e.Summary,
-                detail = e.Detail ?? ""
+                detail = e.Detail ?? "",
+                isRead = e.IsRead
             }),
-            allEvents = EventHistory.Entries.Reverse().Take(100).Select(e => new
-            {
-                timestamp = e.Timestamp.ToString("HH:mm:ss"),
-                level = e.Level,
-                eventName = e.EventName,
-                summary = e.Summary,
-                detail = e.Detail ?? ""
-            }),
+            allEvents = entries
+                .Select((e, i) => new { e, i })
+                .Reverse()
+                .Take(100)
+                .Select(x => new
+                {
+                    timestamp = x.e.Timestamp.ToString("HH:mm:ss"),
+                    level = x.e.Level,
+                    eventName = x.e.EventName,
+                    summary = x.e.Summary,
+                    detail = x.e.Detail ?? "",
+                    isRead = x.e.IsRead,
+                    _idx = x.i
+                }),
             language = I18n.CurrentLanguage,
             hookConfig = HookConfig.GetAllStates()
         };
@@ -181,6 +192,22 @@ internal partial class MainWindow : Form
                             PushState("hook_config", HookConfig.GetAllStates());
                         }
                     }
+                    break;
+
+                case "mark_all_read":
+                    EventHistory.MarkAllRead();
+                    TrayMode.UpdateTooltip();
+                    PushState("state_sync", GetCurrentState());
+                    break;
+
+                case "mark_read":
+                    if (doc.RootElement.TryGetProperty("payload", out var mrPayload))
+                    {
+                        var idx = mrPayload.GetProperty("index").GetInt32();
+                        EventHistory.MarkRead(idx);
+                        TrayMode.UpdateTooltip();
+                    }
+                    PushState("state_sync", GetCurrentState());
                     break;
 
                 case "clear_history":

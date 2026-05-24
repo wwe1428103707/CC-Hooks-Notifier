@@ -2,7 +2,7 @@
 ; Compile: ISCC.exe setup.iss
 
 #define MyAppName "Claude Code Hooks Notifier"
-#define MyAppVersion "1.11.0"
+#define MyAppVersion "1.12.0-beta.4"
 #define MyAppPublisher "Claude Code Hooks Notifier"
 #define MyAppExeName "hooks-notifier.exe"
 
@@ -18,7 +18,7 @@ DisableDirPage=no
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 OutputDir=.
-OutputBaseFilename=ClaudeCodeHooksNotifier-Setup
+OutputBaseFilename=ClaudeCodeHooksNotifier-Setup-{#MyAppVersion}
 SetupIconFile=icon.ico
 Compression=lzma2/max
 SolidCompression=yes

@@ -10,10 +10,12 @@ internal static class IconHelper
 {
     private static Icon? _normal;
     private static Icon? _highlighted;
+    private static Icon? _blank;
     private static string? _iconPath;
 
     public static Icon Normal => _normal ??= LoadIcon(false);
     public static Icon Highlighted => _highlighted ??= LoadIcon(true);
+    public static Icon Blank => _blank ??= CreateBlankIcon();
 
     /// <summary>Set path to icon.ico (called once at startup).</summary>
     public static void SetPath(string dir)
@@ -78,6 +80,15 @@ internal static class IconHelper
     {
         if (_normal != null) { DestroyIcon(_normal.Handle); _normal = null; }
         if (_highlighted != null) { DestroyIcon(_highlighted.Handle); _highlighted = null; }
+        if (_blank != null) { DestroyIcon(_blank.Handle); _blank = null; }
+    }
+
+    /// <summary>Create a fully transparent icon matching Normal's dimensions.</summary>
+    private static Icon CreateBlankIcon()
+    {
+        int w = Normal.Width, h = Normal.Height;
+        using var bmp = new Bitmap(w, h, PixelFormat.Format32bppArgb);
+        return Icon.FromHandle(bmp.GetHicon());
     }
 
     [System.Runtime.InteropServices.DllImport("user32.dll")]

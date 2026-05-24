@@ -40,6 +40,12 @@
   "dialog.perm_allowed": "Claude Code — Permission Allowed",
   "dialog.perm_denied": "Claude Code — Permission Denied",
 
+  "tray.unread": "{0} unread notifications",
+  "tray.unread_max": "999+ unread notifications",
+  "tray.unread_title": "{0} — Claude Code Hooks Notifier",
+
+  "menu.view_notifications": "View Notifications ({0} unread)",
+  "menu.view_notifications_none": "View Notifications",
   "menu.running": "Hooks Notifier — running",
   "menu.notifications": "Notifications: {0}",
   "menu.subagent": "Subagent: {0}",
@@ -48,6 +54,7 @@
   "menu.task_idle": "Task: IDLE",
   "menu.configure_hooks": "Configure Hooks",
   "menu.update_hook_path": "Update Hook Path",
+  "menu.blink_notifications": "Blink on notification",
   "menu.clear_counters": "Clear counters",
   "menu.open_at_login": "Open at Login",
   "menu.language": "Language",
