@@ -3,15 +3,38 @@ using Microsoft.Web.WebView2.WinForms;
 
 namespace HooksNotifier;
 
-/// <summary>WebView2 host for the React/shadcn UI.</summary>
+/// <summary>WebView2 host for the React/shadcn UI. Pre-warmed on tray startup for instant open.</summary>
 internal partial class MainWindow : Form
 {
     private readonly WebView2 _webView;
+    private readonly Label _loadingLabel;
     private bool _loaded;
     private bool _pendingTrayOpen;
+    private static MainWindow? _preWarmed;
 
     /// <summary>Signal that this window was opened via tray icon click (sets defaultFilter to "unread").</summary>
     public void MarkTrayOpen() => _pendingTrayOpen = true;
+
+    /// <summary>Pre-warm WebView2 at tray startup so first open skips cold start.</summary>
+    public static void PreWarm()
+    {
+        if (_preWarmed != null) return;
+        _preWarmed = new MainWindow();
+        _preWarmed.Show();  // triggers WebView2 environment creation
+        _preWarmed.Hide();  // keep initialized, ready to show
+    }
+
+    /// <summary>Return pre-warmed instance or create a new one if needed.</summary>
+    public static MainWindow GetOrCreate()
+    {
+        if (_preWarmed != null)
+        {
+            var w = _preWarmed;
+            _preWarmed = null;
+            return w;
+        }
+        return new MainWindow();
+    }
 
     public MainWindow()
     {
@@ -19,16 +42,29 @@ internal partial class MainWindow : Form
         Size = new Size(1200, 800);
         MinimumSize = new Size(960, 640);
         StartPosition = FormStartPosition.CenterScreen;
-        BackColor = Color.FromArgb(245, 247, 250);
-        // Set window icon from icon.ico
+        BackColor = Color.FromArgb(22, 27, 34); // dark — avoids white flash
         var iconDir = Path.GetDirectoryName(Environment.ProcessPath);
         var iconFile = iconDir != null ? Path.Combine(iconDir, "icon.ico") : null;
         if (iconFile != null && File.Exists(iconFile))
             Icon = new Icon(iconFile);
 
+        // Loading overlay while WebView2 initializes
+        _loadingLabel = new Label
+        {
+            Text = "Claude Code Hooks Notifier",
+            Font = new Font("Microsoft YaHei UI", 14, FontStyle.Regular),
+            ForeColor = Color.FromArgb(180, 190, 200),
+            BackColor = Color.FromArgb(22, 27, 34),
+            TextAlign = ContentAlignment.MiddleCenter,
+            Dock = DockStyle.Fill,
+            Visible = true
+        };
+        Controls.Add(_loadingLabel);
+
         _webView = new WebView2 { Dock = DockStyle.Fill };
         _webView.CoreWebView2InitializationCompleted += OnWebViewReady;
         Controls.Add(_webView);
+        _loadingLabel.BringToFront();
 
         _webView.EnsureCoreWebView2Async();
     }
@@ -37,7 +73,6 @@ internal partial class MainWindow : Form
     {
         if (_webView.CoreWebView2 == null) return;
 
-        // Serve webui from bin/webui/
         var webuiPath = Path.Combine(AppContext.BaseDirectory, "webui");
         if (Directory.Exists(webuiPath))
         {
@@ -48,16 +83,19 @@ internal partial class MainWindow : Form
         }
         else
         {
-            // Fallback: dev server
             _webView.CoreWebView2.Navigate("http://localhost:5173");
         }
 
-        // Disable right-click and dev tools in release
         _webView.CoreWebView2.Settings.AreDevToolsEnabled = false;
         _webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
-
-        // Listen for JS messages
         _webView.CoreWebView2.WebMessageReceived += OnJsMessage;
+
+        // Hide loading overlay once page loads
+        _webView.CoreWebView2.NavigationCompleted += (_, _) =>
+        {
+            if (_loadingLabel.IsHandleCreated)
+                _loadingLabel.BeginInvoke(() => _loadingLabel.Visible = false);
+        };
 
         _loaded = true;
         PushState("state_sync", GetCurrentState());

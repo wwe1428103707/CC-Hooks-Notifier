@@ -104,6 +104,9 @@ internal static class TrayMode
         // ── IPC server ───────────────────────────────────────────────
         IpcService.StartServer(OnIpcMessage, _cts.Token);
 
+        // Pre-warm WebView2 so dashboard opens without white screen
+        _uiContext!.Post(_ => MainWindow.PreWarm(), null);
+
         Application.Run();
         return 0;
     }
@@ -220,7 +223,7 @@ internal static class TrayMode
         {
             if (_mainWindow == null || _mainWindow.IsDisposed)
             {
-                _mainWindow = new MainWindow();
+                _mainWindow = MainWindow.GetOrCreate();
                 _mainWindow.MarkTrayOpen();
                 _mainWindow.Show();
             }
