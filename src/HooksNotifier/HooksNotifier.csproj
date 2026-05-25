@@ -10,6 +10,7 @@
     <RootNamespace>HooksNotifier</RootNamespace>
     <AssemblyName>hooks-notifier</AssemblyName>
     <ApplicationIcon>icon.ico</ApplicationIcon>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
   </PropertyGroup>
 
   <!-- Copy i18n language files and icon to output -->

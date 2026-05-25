@@ -120,6 +120,7 @@ internal partial class MainWindow : Form
                     isRead = x.e.IsRead,
                     _idx = x.i
                 }),
+            maxEntries = EventHistory.MaxEntries,
             language = I18n.CurrentLanguage,
             hookConfig = HookConfig.GetAllStates()
         };
@@ -206,6 +207,15 @@ internal partial class MainWindow : Form
                         var idx = mrPayload.GetProperty("index").GetInt32();
                         EventHistory.MarkRead(idx);
                         TrayMode.UpdateTooltip();
+                    }
+                    PushState("state_sync", GetCurrentState());
+                    break;
+
+                case "set_max_entries":
+                    if (doc.RootElement.TryGetProperty("payload", out var mePayload))
+                    {
+                        var max = mePayload.GetProperty("value").GetInt32();
+                        EventHistory.MaxEntries = max;
                     }
                     PushState("state_sync", GetCurrentState());
                     break;

@@ -19,6 +19,9 @@ sealed class Program
 
     static int Main()
     {
+        // Enable high-DPI rendering so the dialog is crisp on scaled displays
+        Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
+
         // When double-clicked (no pipe), launch tray and exit
         if (!Console.IsInputRedirected)
         {
@@ -106,7 +109,7 @@ sealed class Program
             ["decision"] = decision
         };
 
-        // Add updatedPermissions if user selected any "always allow" options
+        // Send selected options back to Claude Code
         if (result.Allowed && result.SelectedPermissions.Count > 0)
         {
             hookOutput["updatedPermissions"] = result.SelectedPermissions;
@@ -126,7 +129,7 @@ sealed class Program
 
     sealed record PermissionDialogOutcome(bool Allowed, List<object> SelectedPermissions);
 
-    /// <summary>Show a WinForms dialog with Allow/Deny and optional "always allow" checkboxes.</summary>
+    /// <summary>Show a modern WinForms dialog with Allow/Deny, option radio buttons, and free-text input.</summary>
     static PermissionDialogOutcome ShowPermissionDialog(HookData data)
     {
         var tool = data.ToolName ?? "Unknown";
@@ -142,132 +145,269 @@ sealed class Program
             }
         }
 
-        // Parse permission_suggestions from input
         var suggestions = new List<JsonElement>();
         if (data.PermissionSuggestions != null)
-        {
             foreach (var s in data.PermissionSuggestions)
                 suggestions.Add(s);
-        }
 
-        // Dialog dimensions: taller when suggestions exist
         var hasSuggestions = suggestions.Count > 0;
-        var formH = hasSuggestions ? 420 : 340;
-        var detailsH = hasSuggestions ? 120 : 150;
-        var barY = hasSuggestions ? 324 : 244;
+        var detailText = detailLines.Count > 0 ? string.Join("\r\n", detailLines) : "(no details)";
+        var hasDetails = detailText != "(no details)";
 
+        // ── Layout constants ────────────────────────────────────────
+        const int W = 800;
+        const int pad = 28;
+        var headerH = 64;
+        var detailsH = hasDetails ? Math.Min(140, 20 + detailLines.Count * 20) : 0;
+        var cardH = 52;
+        var optionsGapY = 6;
+        var optionsHeaderH = hasSuggestions ? 26 : 0;
+        var rememberH = hasSuggestions ? 36 : 0;
+        var btnBarH = 64;
+        var contentY = headerH + 20;
+
+        // ── Colors ──────────────────────────────────────────────────
+        var cBg = Color.FromArgb(250, 251, 252);
+        var cHeaderBg = Color.FromArgb(22, 27, 34);
+        var cWhite = Color.White;
+        var cText = Color.FromArgb(36, 41, 47);
+        var cSubText = Color.FromArgb(110, 118, 129);
+        var cAccent = Color.FromArgb(31, 111, 235);
+        var cAccentHover = Color.FromArgb(24, 91, 196);
+        var cDanger = Color.FromArgb(220, 53, 69);
+        var cDangerHover = Color.FromArgb(191, 45, 59);
+        var cBorder = Color.FromArgb(208, 215, 222);
+        var cCardHover = Color.FromArgb(236, 243, 254);
+        var cCardSelected = Color.FromArgb(218, 233, 254);
+        var cGrayBg = Color.FromArgb(246, 248, 250);
+
+        // ── Form (height finalized after layout) ───────────────────────
         using var form = new Form
         {
-            Text = "Claude Code — Permission Required",
-            Size = new Size(560, formH),
+            Text = "",
+            Size = new Size(W, 600),  // temporary; recalculated below
             StartPosition = FormStartPosition.CenterScreen,
             TopMost = true,
-            FormBorderStyle = FormBorderStyle.FixedDialog,
-            MaximizeBox = false,
-            MinimizeBox = false,
-            BackColor = Color.FromArgb(248, 249, 250),
+            FormBorderStyle = FormBorderStyle.None,
+            BackColor = cBg,
+            Padding = new Padding(0),
             Font = new Font("Microsoft YaHei UI", 9)
         };
 
-        form.Controls.Add(new Label
+        // ── Drag-to-move support ────────────────────────────────────
+        bool dragging = false; Point dragStart = Point.Empty;
+        form.MouseDown += (_, e) => { if (e.Y < headerH) { dragging = true; dragStart = e.Location; } };
+        form.MouseMove += (_, e) => { if (dragging) { form.Location = new Point(form.Location.X + e.X - dragStart.X, form.Location.Y + e.Y - dragStart.Y); } };
+        form.MouseUp += (_, _) => dragging = false;
+
+        // ── Header bar ──────────────────────────────────────────────
+        var headerBar = new Panel
         {
-            Text = "Claude Code needs your permission",
+            BackColor = cHeaderBg,
+            Location = new Point(0, 0),
+            Size = new Size(W, headerH)
+        };
+        form.Controls.Add(headerBar);
+
+        headerBar.MouseDown += (_, e) => { dragging = true; dragStart = e.Location; };
+        headerBar.MouseMove += (_, e) => { if (dragging) { form.Location = new Point(form.Location.X + e.X - dragStart.X, form.Location.Y + e.Y - dragStart.Y); } };
+        headerBar.MouseUp += (_, _) => dragging = false;
+
+        headerBar.Controls.Add(new Label
+        {
+            Text = "Claude Code — Permission Required",
             Font = new Font("Microsoft YaHei UI", 12, FontStyle.Bold),
-            ForeColor = Color.FromArgb(33, 37, 41),
-            Location = new Point(20, 14),
-            Size = new Size(520, 26)
+            ForeColor = cWhite,
+            Location = new Point(pad, 18),
+            Size = new Size(W - 60, 30),
+            BackColor = Color.Transparent
         });
 
-        form.Controls.Add(new Label
+        // ── Tool badge ──────────────────────────────────────────────
+        var toolBadge = new Panel
+        {
+            BackColor = Color.FromArgb(40, 50, 62),
+            Location = new Point(pad, contentY),
+            Size = new Size(W - pad * 2, 42),
+        };
+        form.Controls.Add(toolBadge);
+
+        toolBadge.Controls.Add(new Label
         {
             Text = $"Tool: {tool}",
-            Font = new Font("Consolas", 10, FontStyle.Bold),
-            ForeColor = Color.FromArgb(67, 97, 238),
-            Location = new Point(20, 46),
-            Size = new Size(520, 18)
+            Font = new Font("Consolas", 11, FontStyle.Bold),
+            ForeColor = Color.FromArgb(88, 166, 255),
+            Location = new Point(16, 10),
+            Size = new Size(W - 100, 22),
+            BackColor = Color.Transparent
         });
+        contentY += 52;
 
-        form.Controls.Add(new TextBox
+        // ── Details section ─────────────────────────────────────────
+        if (hasDetails)
         {
-            Multiline = true,
-            ReadOnly = true,
-            ScrollBars = ScrollBars.Vertical,
-            Font = new Font("Consolas", 9),
-            Location = new Point(20, 72),
-            Size = new Size(510, detailsH),
-            BackColor = Color.White,
-            BorderStyle = BorderStyle.FixedSingle,
-            Text = detailLines.Count > 0 ? string.Join("\r\n", detailLines) : "(no details)",
-            TabStop = false
-        });
+            var detailPanel = new Panel
+            {
+                BackColor = cWhite,
+                BorderStyle = BorderStyle.FixedSingle,
+                Location = new Point(pad, contentY),
+                Size = new Size(W - pad * 2, detailsH)
+            };
+            form.Controls.Add(detailPanel);
 
-        // "Always allow" checkboxes from permission_suggestions
-        var checkboxes = new List<CheckBox>();
+            detailPanel.Controls.Add(new TextBox
+            {
+                Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical,
+                Font = new Font("Consolas", 10),
+                Location = new Point(12, 10),
+                Size = new Size(detailPanel.Width - 26, detailPanel.Height - 20),
+                BackColor = cWhite,
+                BorderStyle = BorderStyle.None,
+                ForeColor = cText,
+                Text = detailText,
+                TabStop = false
+            });
+            contentY += detailsH + 12;
+        }
+
+        // ── Options section ─────────────────────────────────────────
+        var radioButtons = new List<RadioButton>();
+        var textBoxes = new List<TextBox>();
+        var rememberCb = (CheckBox?)null;
+
         if (hasSuggestions)
         {
-            var yOff = 72 + detailsH + 8;
-            form.Controls.Add(new Label
+            var optLabel = new Label
             {
-                Text = "Always allow:",
-                Font = new Font("Microsoft YaHei UI", 9, FontStyle.Regular),
-                ForeColor = Color.FromArgb(80, 80, 80),
-                Location = new Point(20, yOff),
-                Size = new Size(100, 20)
-            });
+                Text = suggestions.Count == 1 ? "Available option" : "Choose an option",
+                Font = new Font("Microsoft YaHei UI", 9, FontStyle.Bold),
+                ForeColor = cSubText,
+                Location = new Point(pad, contentY),
+                Size = new Size(300, 18),
+                BackColor = Color.Transparent
+            };
+            form.Controls.Add(optLabel);
+            contentY += optionsHeaderH;
 
             for (int i = 0; i < suggestions.Count; i++)
             {
-                var cb = new CheckBox
+                var desc = DescribeSuggestion(suggestions[i], tool);
+                var isFreeInput = IsFreeInputSuggestion(suggestions[i]);
+                var rowY = contentY + i * (cardH + optionsGapY);
+
+                var card = new Panel
                 {
-                    Text = DescribeSuggestion(suggestions[i], tool),
-                    Location = new Point(30, yOff + 22 + i * 24),
-                    Size = new Size(500, 22),
-                    Font = new Font("Microsoft YaHei UI", 9),
-                    ForeColor = Color.FromArgb(50, 50, 50),
-                    TabIndex = 10 + i,
-                    Checked = false
+                    Location = new Point(pad, rowY),
+                    Size = new Size(W - pad * 2, cardH),
+                    BackColor = i == 0 ? cCardSelected : cGrayBg,
+                    Tag = i
                 };
-                form.Controls.Add(cb);
-                checkboxes.Add(cb);
+                form.Controls.Add(card);
+
+                var rb = new RadioButton
+                {
+                    Text = isFreeInput ? $"{desc} — " : desc,
+                    Location = new Point(18, 16),
+                    Size = isFreeInput ? new Size(240, 20) : new Size(card.Width - 40, 20),
+                    Font = new Font("Microsoft YaHei UI", 10),
+                    ForeColor = cText,
+                    BackColor = Color.Transparent,
+                    TabIndex = 10 + i,
+                    Checked = i == 0,
+                    AutoSize = !isFreeInput
+                };
+                card.Controls.Add(rb);
+                radioButtons.Add(rb);
+
+                if (isFreeInput)
+                {
+                    var tb = new TextBox
+                    {
+                        Location = new Point(260, 12),
+                        Size = new Size(card.Width - 280, 28),
+                        Font = new Font("Consolas", 10),
+                        BorderStyle = BorderStyle.FixedSingle,
+                        BackColor = cWhite,
+                        TabIndex = 10 + i + 100,
+                        Enabled = rb.Checked,
+                        PlaceholderText = "Enter custom command..."
+                    };
+                    card.Controls.Add(tb);
+                    textBoxes.Add(tb);
+
+                    var capturedTb = tb;
+                    rb.CheckedChanged += (_, _) => { capturedTb.Enabled = rb.Checked; };
+                }
+                else
+                {
+                    textBoxes.Add(null!);
+                }
+
+                int capturedI = i;
+                rb.CheckedChanged += (_, _) =>
+                {
+                    if (rb.Checked)
+                    {
+                        for (int j = 0; j < radioButtons.Count; j++)
+                        {
+                            if (j != capturedI && radioButtons[j].Checked)
+                                radioButtons[j].Checked = false;
+                        }
+                    }
+                    for (int j = 0; j < radioButtons.Count; j++)
+                    {
+                        var cj = form.Controls.OfType<Panel>().FirstOrDefault(p => p.Tag is int tj && tj == j);
+                        if (cj != null)
+                            cj.BackColor = radioButtons[j].Checked ? cCardSelected : cGrayBg;
+                    }
+                };
+
+                card.MouseEnter += (_, _) => { if (!rb.Checked) card.BackColor = cCardHover; };
+                card.MouseLeave += (_, _) => { if (!rb.Checked) card.BackColor = cGrayBg; };
+                card.Click += (_, _) => { rb.Checked = true; };
             }
+            contentY += suggestions.Count * (cardH + optionsGapY) + optionsGapY;
+
+            rememberCb = new CheckBox
+            {
+                Text = "Always allow — don't ask again for this choice",
+                Location = new Point(pad + 4, contentY),
+                Size = new Size(450, 24),
+                Font = new Font("Microsoft YaHei UI", 9),
+                ForeColor = cSubText,
+                BackColor = Color.Transparent,
+                TabIndex = 200
+            };
+            form.Controls.Add(rememberCb);
+            contentY += rememberH;
         }
 
-        var bar = new Panel
-        {
-            Location = new Point(0, barY),
-            Size = new Size(560, 50),
-            BackColor = Color.FromArgb(241, 243, 245),
-            BorderStyle = BorderStyle.FixedSingle
-        };
-        form.Controls.Add(bar);
+        // ── Finalize form height ───────────────────────────────────────
+        var formH = contentY + 72 + btnBarH;
+        form.Size = new Size(W, formH);
 
-        var btnDeny = new Button
+        // ── Bottom bar ──────────────────────────────────────────────
+        var btnBar = new Panel
         {
-            Text = "Deny",
-            Location = new Point(440, 10),
-            Size = new Size(95, 28),
-            FlatStyle = FlatStyle.Flat,
-            BackColor = Color.White,
-            ForeColor = Color.FromArgb(220, 53, 69),
-            DialogResult = DialogResult.No,
-            TabIndex = 2
+            Location = new Point(0, formH - btnBarH),
+            Size = new Size(W, btnBarH),
+            BackColor = Color.White
         };
-        btnDeny.FlatAppearance.BorderColor = Color.FromArgb(220, 53, 69);
-        bar.Controls.Add(btnDeny);
+        btnBar.Paint += (_, pe) => { pe.Graphics.DrawLine(new Pen(Color.FromArgb(230, 234, 239)), 0, 0, W, 0); };
+        form.Controls.Add(btnBar);
 
-        var btnAllow = new Button
-        {
-            Text = "Allow",
-            Location = new Point(330, 10),
-            Size = new Size(95, 28),
-            FlatStyle = FlatStyle.Flat,
-            BackColor = Color.FromArgb(67, 97, 238),
-            ForeColor = Color.White,
-            DialogResult = DialogResult.Yes,
-            TabIndex = 0
-        };
-        btnAllow.FlatAppearance.BorderColor = Color.FromArgb(67, 97, 238);
-        bar.Controls.Add(btnAllow);
+        var btnW = 100;
+        var btnH = 38;
+        var btnY = (btnBarH - btnH) / 2;
+        var btnDeny = CreateModernButton("Deny",
+            new Point(W - pad - btnW * 2 - 12, btnY), new Size(btnW, btnH),
+            cWhite, cDanger, cDangerHover, Color.FromArgb(220, 53, 69), DialogResult.No);
+        btnBar.Controls.Add(btnDeny);
+
+        var btnAllow = CreateModernButton("Allow",
+            new Point(W - pad - btnW, btnY), new Size(btnW, btnH),
+            cAccent, cWhite, cAccentHover, cAccent, DialogResult.Yes);
+        btnBar.Controls.Add(btnAllow);
 
         form.AcceptButton = btnAllow;
         form.CancelButton = btnDeny;
@@ -275,20 +415,47 @@ sealed class Program
         var dialogResult = form.ShowDialog();
         var allowed = dialogResult == DialogResult.Yes;
 
-        // Collect checked suggestions as updatedPermissions
+        // ── Collect selected options ───────────────────────────────
         var selectedPerms = new List<object>();
-        if (allowed)
+        if (allowed && hasSuggestions)
         {
-            for (int i = 0; i < checkboxes.Count; i++)
+            for (int i = 0; i < radioButtons.Count; i++)
             {
-                if (checkboxes[i].Checked)
+                if (radioButtons[i].Checked)
                 {
-                    selectedPerms.Add(suggestions[i]);
+                    var suggestion = suggestions[i];
+                    if (textBoxes[i] != null && !string.IsNullOrWhiteSpace(textBoxes[i].Text))
+                        suggestion = InjectCustomRule(suggestions[i], textBoxes[i].Text.Trim());
+                    selectedPerms.Add(suggestion);
+                    break;
                 }
             }
         }
 
         return new PermissionDialogOutcome(allowed, selectedPerms);
+    }
+
+    /// <summary>Create a modern styled button with rounded corners and hover effect.</summary>
+    static Button CreateModernButton(string text, Point loc, Size size,
+        Color bg, Color fg, Color hoverBg, Color borderColor, DialogResult result)
+    {
+        var btn = new Button
+        {
+            Text = text,
+            Location = loc,
+            Size = size,
+            FlatStyle = FlatStyle.Flat,
+            BackColor = bg,
+            ForeColor = fg,
+            Font = new Font("Microsoft YaHei UI", 11, FontStyle.Bold),
+            DialogResult = result,
+            TabIndex = result == DialogResult.Yes ? 0 : 2
+        };
+        btn.FlatAppearance.BorderSize = 1;
+        btn.FlatAppearance.BorderColor = borderColor;
+        btn.FlatAppearance.MouseOverBackColor = hoverBg;
+        btn.FlatAppearance.MouseDownBackColor = hoverBg;
+        return btn;
     }
 
     /// <summary>Generate a human-readable label for a permission suggestion.</summary>
@@ -325,6 +492,32 @@ sealed class Program
 
         return $"{type} ({behavior}, {dest})";
     }
+
+    /// <summary>Check if a suggestion has empty ruleContent (allows free-text input).</summary>
+    static bool IsFreeInputSuggestion(JsonElement s)
+    {
+        var type = s.TryGetProperty("type", out var t) ? t.GetString() ?? "" : "";
+        if (type != "addRules") return false;
+        if (!s.TryGetProperty("rules", out var rules)) return false;
+        foreach (var rule in rules.EnumerateArray())
+        {
+            var rc = rule.TryGetProperty("ruleContent", out var rv) ? rv.GetString() ?? "" : "";
+            if (string.IsNullOrEmpty(rc)) return true; // empty = free input
+        }
+        return false;
+    }
+
+    /// <summary>Inject a custom command into an addRules suggestion with empty ruleContent.</summary>
+    static JsonElement InjectCustomRule(JsonElement original, string customText)
+    {
+        var json = original.GetRawText();
+        // Replace the last empty ruleContent with the user's custom text
+        var patched = json.Replace("\"ruleContent\":\"\"", $"\"ruleContent\":\"{EscapeJson(customText)}\"");
+        patched = patched.Replace("\"ruleContent\": \"\"", $"\"ruleContent\": \"{EscapeJson(customText)}\"");
+        return JsonDocument.Parse(patched).RootElement;
+    }
+
+    static string EscapeJson(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n");
 
     static void ShowToast(HookData data)
     {

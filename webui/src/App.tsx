@@ -15,6 +15,7 @@ interface Feedback { success: boolean; message: string }
 interface AppState {
   counts: Counts; unreadCount: number; subagentCount: number; taskCount: number
   recentEvents: EventRow[]; allEvents: EventRow[]; language: string
+  maxEntries?: number
   hookConfig?: Record<string, boolean>
   defaultFilter?: string
   _feedback?: Feedback | null
@@ -22,7 +23,7 @@ interface AppState {
 
 const defaultState: AppState = {
   counts: { total: 0, p0: 0, p05: 0, toast: 0, stateful: 0 },
-  unreadCount: 0, subagentCount: 0, taskCount: 0, recentEvents: [], allEvents: [], language: "en",
+  unreadCount: 0, subagentCount: 0, taskCount: 0, recentEvents: [], allEvents: [], language: "en", maxEntries: 500,
 }
 
 const isWebView = typeof (window as any).chrome?.webview?.postMessage === "function"
@@ -298,8 +299,9 @@ function EventLog({ state, onClearHistory, onMarkAllRead, onMarkRead }: {
 }
 
 // ── Settings ───────────────────────────────────────────────────────
-function Settings({ state, onSetLang, onUpdatePath, onOpenSettings }:
-  { state: AppState; onSetLang: (code: string) => void; onUpdatePath: () => void; onOpenSettings: () => void }) {
+function Settings({ state, onSetLang, onUpdatePath, onOpenSettings, onSetMaxEntries }:
+  { state: AppState; onSetLang: (code: string) => void; onUpdatePath: () => void; onOpenSettings: () => void; onSetMaxEntries: (v: number) => void }) {
+  const maxEntryOptions = [100, 200, 500, 1000, 2000, 5000]
   return (
     <div className="p-6 space-y-4 max-w-xl">
       <Card>
@@ -312,6 +314,20 @@ function Settings({ state, onSetLang, onUpdatePath, onOpenSettings }:
               <SelectItem value="zh">中文</SelectItem>
             </SelectContent>
           </Select>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-sm">{t("settings.max_entries")}</CardTitle></CardHeader>
+        <CardContent className="space-y-1">
+          <p className="text-xs text-muted-foreground">{t("settings.max_entries_desc")}</p>
+          <div className="flex gap-2 flex-wrap">
+            {maxEntryOptions.map(n => (
+              <button key={n} onClick={() => onSetMaxEntries(n)}
+                className={`text-xs px-2.5 py-1 rounded cursor-pointer transition-colors ${(state.maxEntries ?? 500) === n ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                {n}
+              </button>
+            ))}
+          </div>
         </CardContent>
       </Card>
       <Card>
@@ -360,7 +376,7 @@ function About() {
           <img src={iconBase64} alt="" className="w-10 h-10" />
           <div>
             <h2 className="text-xl font-bold">Claude Code Hooks Notifier</h2>
-            <p className="text-sm text-muted-foreground">{t("about.version", "1.12.0-beta.4")}</p>
+            <p className="text-sm text-muted-foreground">{t("about.version", "1.12.0")}</p>
           </div>
         </div>
         <p className="text-sm text-muted-foreground">{t("about.tech_stack")}</p>
@@ -508,7 +524,7 @@ export default function App() {
 
         <TabsContent value="dashboard"><Dashboard state={state} onToggleHook={(key, v) => sendToCs({ type: "set_hook_config", payload: { key, enabled: v } })} /></TabsContent>
         <TabsContent value="eventlog"><EventLog state={state} onClearHistory={() => sendToCs({ type: "clear_history" })} onMarkAllRead={() => sendToCs({ type: "mark_all_read" })} onMarkRead={(idx) => sendToCs({ type: "mark_read", payload: { index: idx } })} /></TabsContent>
-        <TabsContent value="settings"><Settings state={state} onSetLang={setLang} onUpdatePath={() => sendToCs({ type: "update_hook_path" })} onOpenSettings={() => sendToCs({ type: "open_settings" })} /></TabsContent>
+        <TabsContent value="settings"><Settings state={state} onSetLang={setLang} onUpdatePath={() => sendToCs({ type: "update_hook_path" })} onOpenSettings={() => sendToCs({ type: "open_settings" })} onSetMaxEntries={(v) => sendToCs({ type: "set_max_entries", payload: { value: v } })} /></TabsContent>
         <TabsContent value="about"><About /></TabsContent>
       </Tabs>
       {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}

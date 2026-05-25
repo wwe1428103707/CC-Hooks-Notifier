@@ -44,8 +44,9 @@ Think of it as your Claude Code activity monitor. It watches 17 different hook e
 |----------|-----------|
 | **Notification Center** | QQ-style icon blinking (appear / disappear), unread count on hover, single-click opens event log |
 | **Toast Notifications** | Native Windows 10/11 toasts — no browser dependency, works even when terminal is minimized |
-| **Permission Dialog** | Interactive popup with Allow / Deny + "Always allow" checkboxes, right when you need it |
-| **Event Dashboard** | WebView2-powered UI — real-time counters, event log with read/unread filters, hook toggle switches |
+| **Permission Dialog** | Modern dark-themed popup with radio-button option cards, free-text input, "Always allow" persistence |
+| **Event Dashboard** | WebView2-powered UI — real-time counters, event log with read/unread filters, hook toggle switches, configurable max log entries |
+| **High DPI** | PerMonitorV2 awareness — crisp rendering on 125%/150%/200% scaled displays |
 | **17 Hook Events** | PermissionRequest, Notification, StopFailure, PostToolUse, SubagentStart/Stop, TaskCreated/Completed, and more |
 | **Priority Levels** | P0 (critical, long blink) / P0.5 (important, short blink) / P1 (toast) / P2 (silent counter) |
 | **Tray Menu** | Quick access to notifications, hook config, language switch, blink toggle, auto-start |
@@ -126,7 +127,7 @@ The tray icon appears. Go ahead — Claude Code events will now reach you wherev
 |-----|-------------|
 | **Dashboard** | At-a-glance counters: total / unread / P0 / toast / subagents / tasks, plus recent events and per-event enable/disable toggles |
 | **Event Log** | Full history table with read/unread highlighting (amber background + colored dot). Filter: All / Unread / P0 / P0.5 / Toast. One-click "Mark All Read". |
-| **Settings** | Language (EN / 中文), auto-start, hook executable path management, open settings.json directly |
+| **Settings** | Language (EN / 中文), auto-start, max log entries (100–5000), hook path management, open settings.json |
 | **About** | Version info and event coverage table |
 
 ---

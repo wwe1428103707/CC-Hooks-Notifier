@@ -15,8 +15,22 @@ internal sealed record EventEntry(
 internal static class EventHistory
 {
     private static readonly List<EventEntry> _entries = new();
-    private const int MaxEntries = 500;
     private const string FileName = "event_history.json";
+    private const int DefaultMaxEntries = 500;
+
+    private static int _maxEntries = DefaultMaxEntries;
+
+    public static int MaxEntries
+    {
+        get => _maxEntries;
+        set
+        {
+            _maxEntries = Math.Max(50, Math.Min(value, 10000));
+            SaveMaxEntriesToRegistry();
+            TrimExcess();
+            SaveToFile();
+        }
+    }
 
     private static readonly string FilePath;
 
@@ -26,7 +40,9 @@ internal static class EventHistory
         if (string.IsNullOrEmpty(dir))
             dir = Path.GetDirectoryName(Environment.ProcessPath) ?? ".";
         FilePath = Path.Combine(dir, FileName);
+        _maxEntries = LoadMaxEntriesFromRegistry();
         LoadFromFile();
+        TrimExcess(); // ensure loaded data respects saved limit
     }
 
     public static IReadOnlyList<EventEntry> Entries => _entries.AsReadOnly();
@@ -57,6 +73,15 @@ internal static class EventHistory
             _entries.Clear();
         SaveToFile();
         try { if (File.Exists(FilePath)) File.Delete(FilePath); } catch { }
+    }
+
+    private static void TrimExcess()
+    {
+        lock (_entries)
+        {
+            if (_entries.Count > _maxEntries)
+                _entries.RemoveRange(0, _entries.Count - _maxEntries);
+        }
     }
 
     public static int UnreadCount
@@ -137,6 +162,31 @@ internal static class EventHistory
                 return (_entries.Count, p0, p05, toast, stateful);
             }
         }
+    }
+
+    // ── Registry persistence for max entries ────────────────────────
+    private const string RegKey = @"Software\ClaudeCode\HooksNotifier";
+    private const string RegValue = "MaxEntries";
+
+    private static int LoadMaxEntriesFromRegistry()
+    {
+        try
+        {
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(RegKey);
+            var val = key?.GetValue(RegValue);
+            return val is int n ? Math.Max(50, Math.Min(n, 10000)) : DefaultMaxEntries;
+        }
+        catch { return DefaultMaxEntries; }
+    }
+
+    private static void SaveMaxEntriesToRegistry()
+    {
+        try
+        {
+            using var key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(RegKey);
+            key?.SetValue(RegValue, _maxEntries);
+        }
+        catch { }
     }
 
     // ── File persistence ────────────────────────────────────────────
