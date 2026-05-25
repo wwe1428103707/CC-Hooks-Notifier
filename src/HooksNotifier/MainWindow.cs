@@ -1,39 +1,43 @@
+using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Web.WebView2.WinForms;
 
 namespace HooksNotifier;
 
-/// <summary>WebView2 host for the React/shadcn UI. Pre-warmed on tray startup for instant open.</summary>
+/// <summary>WebView2 host for the React/shadcn UI. Created once and kept alive (hide on close).</summary>
 internal partial class MainWindow : Form
 {
     private readonly WebView2 _webView;
     private readonly Label _loadingLabel;
     private bool _loaded;
     private bool _pendingTrayOpen;
-    private static MainWindow? _preWarmed;
+    private readonly Stopwatch _initTimer = Stopwatch.StartNew();
 
     /// <summary>Signal that this window was opened via tray icon click (sets defaultFilter to "unread").</summary>
     public void MarkTrayOpen() => _pendingTrayOpen = true;
 
-    /// <summary>Pre-warm WebView2 at tray startup so first open skips cold start.</summary>
-    public static void PreWarm()
+    /// <summary>Create the single dashboard instance and start WebView2 init.</summary>
+    public static MainWindow Create()
     {
-        if (_preWarmed != null) return;
-        _preWarmed = new MainWindow();
-        _preWarmed.Show();  // triggers WebView2 environment creation
-        _preWarmed.Hide();  // keep initialized, ready to show
+        var mw = new MainWindow();
+        mw.Show();  // trigger handle creation + WebView2 environment init
+        mw.Hide();  // keep alive, ready to show instantly
+        return mw;
     }
 
-    /// <summary>Return pre-warmed instance or create a new one if needed.</summary>
-    public static MainWindow GetOrCreate()
+    /// <summary>Show or re-show the dashboard (activate if already visible).</summary>
+    public void Reopen()
     {
-        if (_preWarmed != null)
+        if (Visible)
         {
-            var w = _preWarmed;
-            _preWarmed = null;
-            return w;
+            Activate();
         }
-        return new MainWindow();
+        else
+        {
+            Show();
+            if (WindowState == FormWindowState.Minimized)
+                WindowState = FormWindowState.Normal;
+        }
     }
 
     public MainWindow()
@@ -42,13 +46,22 @@ internal partial class MainWindow : Form
         Size = new Size(1200, 800);
         MinimumSize = new Size(960, 640);
         StartPosition = FormStartPosition.CenterScreen;
-        BackColor = Color.FromArgb(22, 27, 34); // dark — avoids white flash
+        BackColor = Color.FromArgb(22, 27, 34);
         var iconDir = Path.GetDirectoryName(Environment.ProcessPath);
         var iconFile = iconDir != null ? Path.Combine(iconDir, "icon.ico") : null;
         if (iconFile != null && File.Exists(iconFile))
             Icon = new Icon(iconFile);
 
-        // Loading overlay while WebView2 initializes
+        // Hide instead of close — keep WebView2 warm
+        FormClosing += (_, e) =>
+        {
+            if (e.CloseReason == CloseReason.UserClosing)
+            {
+                e.Cancel = true;
+                Hide();
+            }
+        };
+
         _loadingLabel = new Label
         {
             Text = "Claude Code Hooks Notifier",
@@ -73,6 +86,8 @@ internal partial class MainWindow : Form
     {
         if (_webView.CoreWebView2 == null) return;
 
+        Log.Info($"WebView2 Core ready in {_initTimer.ElapsedMilliseconds}ms");
+
         var webuiPath = Path.Combine(AppContext.BaseDirectory, "webui");
         if (Directory.Exists(webuiPath))
         {
@@ -90,9 +105,10 @@ internal partial class MainWindow : Form
         _webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
         _webView.CoreWebView2.WebMessageReceived += OnJsMessage;
 
-        // Hide loading overlay once page loads
+        var navTimer = Stopwatch.StartNew();
         _webView.CoreWebView2.NavigationCompleted += (_, _) =>
         {
+            Log.Info($"WebView2 page loaded in {_initTimer.ElapsedMilliseconds}ms (nav: {navTimer.ElapsedMilliseconds}ms)");
             if (_loadingLabel.IsHandleCreated)
                 _loadingLabel.BeginInvoke(() => _loadingLabel.Visible = false);
         };

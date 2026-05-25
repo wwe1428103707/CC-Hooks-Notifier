@@ -14,8 +14,18 @@ internal static class Log
         try
         {
             File.AppendAllText(GetPath(),
-                $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}\n");
+                $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] ERROR {message}\n");
         }
-        catch { /* ignore */ }
+        catch { }
+    }
+
+    public static void Info(string message)
+    {
+        try
+        {
+            File.AppendAllText(GetPath(),
+                $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] INFO  {message}\n");
+        }
+        catch { }
     }
 }
