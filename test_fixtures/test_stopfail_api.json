@@ -1,0 +1,6 @@
+{
+  "hook_event_name": "StopFailure",
+  "error": "API error",
+  "error_details": "Overloaded: The server is currently experiencing high load. Please retry in 30 seconds.",
+  "reason": "rate_limit"
+}

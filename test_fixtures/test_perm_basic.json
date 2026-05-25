@@ -1,0 +1,16 @@
+{
+  "hook_event_name": "PermissionRequest",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "rm -rf /tmp/build",
+    "description": "Clean build artifacts"
+  },
+  "permission_suggestions": [
+    {
+      "type": "addRules",
+      "behavior": "allow",
+      "destination": "user",
+      "rules": [{"toolName": "Bash", "ruleContent": "rm -rf /tmp/build"}]
+    }
+  ]
+}

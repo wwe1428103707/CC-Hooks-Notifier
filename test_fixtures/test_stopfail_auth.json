@@ -1,0 +1,6 @@
+{
+  "hook_event_name": "StopFailure",
+  "error": "Authentication failed",
+  "error_details": "Invalid API key. Please check your credentials.",
+  "reason": "auth_error"
+}

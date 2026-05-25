@@ -1,0 +1,7 @@
+{
+  "hook_event_name": "PostToolUseFailure",
+  "hook_event_subtype": "Bash",
+  "tool_name": "Bash",
+  "error": "Exit code 1",
+  "error_details": "Command not found: invalid-cmd"
+}

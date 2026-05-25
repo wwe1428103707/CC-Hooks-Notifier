@@ -1,0 +1,5 @@
+{
+  "hook_event_name": "SessionStart",
+  "hook_event_type": "resume",
+  "model": "claude-opus-4-7"
+}

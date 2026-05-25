@@ -1,0 +1,13 @@
+{
+  "hook_event_name": "PermissionRequest",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "echo '你好世界'",
+    "description": "包含 Unicode 和 emoji 的测试"
+  },
+  "permission_suggestions": [
+    {"type": "addRules", "behavior": "allow", "destination": "user", "rules": [{"toolName": "Bash", "ruleContent": "echo '你好世界 🚀'"}]},
+    {"type": "addRules", "behavior": "allow", "destination": "user", "rules": [{"toolName": "Bash", "ruleContent": "echo 'café'"}]},
+    {"type": "addRules", "behavior": "allow", "destination": "user", "rules": [{"toolName": "Bash", "ruleContent": "curl -X POST -d 'test' http://api.test"}]}
+  ]
+}

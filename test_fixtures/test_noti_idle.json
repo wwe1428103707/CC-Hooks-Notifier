@@ -1,0 +1,5 @@
+{
+  "hook_event_name": "Notification",
+  "hook_event_type": "idle_prompt",
+  "message": "Task complete — ready for your input"
+}

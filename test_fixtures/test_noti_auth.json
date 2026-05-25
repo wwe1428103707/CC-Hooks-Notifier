@@ -1,0 +1,5 @@
+{
+  "hook_event_name": "Notification",
+  "hook_event_type": "auth_success",
+  "message": "Authentication successful"
+}

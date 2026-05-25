@@ -1,0 +1,5 @@
+{
+  "hook_event_name": "SubagentStart",
+  "hook_event_type": "Explore",
+  "task_subject": "Find all API endpoint definitions"
+}

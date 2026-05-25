@@ -10,14 +10,13 @@ import iconBase64 from "./icon_data"
 
 // ── Types ──────────────────────────────────────────────────────────
 interface Counts { total: number; p0: number; p05: number; toast: number; stateful: number }
-interface EventRow { timestamp: string; level: string; eventName: string; summary: string; detail?: string; isRead?: boolean; _idx?: number }
+interface EventRow { timestamp: string; level: string; eventName: string; summary: string; detail: string; isRead: boolean; _idx?: number }
 interface Feedback { success: boolean; message: string }
 interface AppState {
   counts: Counts; unreadCount: number; subagentCount: number; taskCount: number
   recentEvents: EventRow[]; allEvents: EventRow[]; language: string
   maxEntries?: number
   hookConfig?: Record<string, boolean>
-  defaultFilter?: string
   _feedback?: Feedback | null
 }
 
@@ -190,22 +189,24 @@ function EventLog({ state, onClearHistory, onMarkAllRead, onMarkRead }: {
     }
   }
 
-  const filters = ["all", "unread", "P0", "P0.5", "Toast"]
+  const filters = ["all", "unread", "P0", "P0.5", "Toast", "Stateful"]
   const filterLabels: Record<string, string> = {
     all: t("event_log.filter_all"),
     unread: t("event_log.filter_unread"),
+    P0: t("event_log.filter_p0"),
+    "P0.5": t("event_log.filter_p05"),
+    Toast: t("event_log.filter_toast"),
+    Stateful: t("event_log.filter_stateful"),
   }
-  const [filter, setFilter] = useState(state.defaultFilter || "all")
+  const [filter, setFilter] = useState("all")
   const [expanded, setExpanded] = useState<string | null>(null)
   const toggle = (key: string) => setExpanded(expanded === key ? null : key)
 
   const filteredEvents = useMemo(() => {
     let list = [...state.allEvents]
     if (filter === "unread") list = list.filter(e => !e.isRead)
-    else if (filter === "P0") list = list.filter(e => e.level === "P0")
-    else if (filter === "P0.5") list = list.filter(e => e.level === "P0.5")
-    else if (filter === "Toast") list = list.filter(e => e.level === "Toast")
-    // Unread first, then by timestamp descending (natural reverse order)
+    else if (filter !== "all") list = list.filter(e => e.level === filter)
+    // Unread first
     list.sort((a, b) => {
       if (!a.isRead && b.isRead) return -1
       if (a.isRead && !b.isRead) return 1
@@ -376,7 +377,7 @@ function About() {
           <img src={iconBase64} alt="" className="w-10 h-10" />
           <div>
             <h2 className="text-xl font-bold">Claude Code Hooks Notifier</h2>
-            <p className="text-sm text-muted-foreground">{t("about.version", "1.12.0")}</p>
+            <p className="text-sm text-muted-foreground">{t("about.version", "1.13.0")}</p>
           </div>
         </div>
         <p className="text-sm text-muted-foreground">{t("about.tech_stack")}</p>
@@ -443,7 +444,7 @@ export default function App() {
   const [state, setState] = useState<AppState>(defaultState)
   const [showHelp, setShowHelp] = useState(false)
 
-  const handleCsMessage = useCallback((msg: AppState & { type: string; payload: any }) => {
+  const handleCsMessage = useCallback((msg: { type: string; payload: any }) => {
     if (msg.type === "state_sync") {
       setLanguage(msg.payload.language)
       setState(msg.payload)
@@ -452,7 +453,7 @@ export default function App() {
         ...prev,
         unreadCount: msg.payload.unreadCount ?? (prev.unreadCount + 1),
         recentEvents: [msg.payload, ...prev.recentEvents].slice(0, 5),
-        allEvents: [msg.payload, ...prev.allEvents].slice(0, 500),
+        allEvents: [msg.payload, ...prev.allEvents].slice(0, prev.maxEntries ?? 500),
         counts: {
           ...prev.counts,
           total: prev.counts.total + 1,

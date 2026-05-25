@@ -1,0 +1,6 @@
+{
+  "hook_event_name": "StopFailure",
+  "error": "Billing error",
+  "error_details": "Your account has insufficient credits.",
+  "reason": "billing_error"
+}

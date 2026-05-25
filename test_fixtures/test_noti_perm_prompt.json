@@ -1,0 +1,6 @@
+{
+  "hook_event_name": "Notification",
+  "hook_event_type": "permission_prompt",
+  "title": "Claude needs your permission",
+  "message": "Claude is waiting for you to approve a tool call"
+}

@@ -1,0 +1,4 @@
+{
+  "hook_event_name": "SessionEnd",
+  "hook_event_type": "prompt_input_exit"
+}

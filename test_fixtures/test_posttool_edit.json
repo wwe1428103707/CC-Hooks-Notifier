@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PostToolUse",
+  "hook_event_subtype": "Edit",
+  "tool_name": "Edit",
+  "tool_input": {
+    "file_path": "D:\\project\\src\\main.ts",
+    "description": "Update imports"
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "hook_event_name": "SubagentStop",
+  "hook_event_type": "Explore",
+  "last_assistant_message": "Found 12 API endpoint definitions across 5 files."
+}

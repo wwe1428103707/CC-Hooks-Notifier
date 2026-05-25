@@ -1,0 +1,5 @@
+{
+  "hook_event_name": "TaskCreated",
+  "hook_event_type": "pending",
+  "task_subject": "Refactor authentication middleware"
+}

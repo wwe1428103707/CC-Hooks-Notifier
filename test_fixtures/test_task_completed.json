@@ -1,0 +1,4 @@
+{
+  "hook_event_name": "TaskCompleted",
+  "task_subject": "Fix login authentication bug"
+}

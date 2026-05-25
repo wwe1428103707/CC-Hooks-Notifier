@@ -221,6 +221,7 @@ internal static class TrayMode
             if (_mainWindow == null || _mainWindow.IsDisposed)
             {
                 _mainWindow = new MainWindow();
+                _mainWindow.MarkTrayOpen();
                 _mainWindow.Show();
             }
             else
@@ -362,7 +363,7 @@ internal static class TrayMode
     {
         ToastService.ShowBalloon(
             I18n.Get("about.title"),
-            I18n.Get("about.version", "1.12.0"));
+            I18n.Get("about.version", "1.13.0"));
     }
 
     /// <summary>Rebuild the entire menu after language switch.</summary>

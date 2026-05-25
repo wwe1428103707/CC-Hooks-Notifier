@@ -8,6 +8,10 @@ internal partial class MainWindow : Form
 {
     private readonly WebView2 _webView;
     private bool _loaded;
+    private bool _pendingTrayOpen;
+
+    /// <summary>Signal that this window was opened via tray icon click (sets defaultFilter to "unread").</summary>
+    public void MarkTrayOpen() => _pendingTrayOpen = true;
 
     public MainWindow()
     {
@@ -91,6 +95,8 @@ internal partial class MainWindow : Form
     {
         var (total, p0, p05, toast, stateful) = EventHistory.Counts;
         var entries = EventHistory.Entries;
+        var df = _pendingTrayOpen ? "unread" : "all";
+        _pendingTrayOpen = false;
         return new
         {
             counts = new { total, p0, p05, toast, stateful },
@@ -122,7 +128,8 @@ internal partial class MainWindow : Form
                 }),
             maxEntries = EventHistory.MaxEntries,
             language = I18n.CurrentLanguage,
-            hookConfig = HookConfig.GetAllStates()
+            hookConfig = HookConfig.GetAllStates(),
+            defaultFilter = df
         };
     }
 

@@ -1,0 +1,14 @@
+{
+  "hook_event_name": "PermissionRequest",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "git push origin main",
+    "description": "Push to remote repository"
+  },
+  "permission_suggestions": [
+    {"type": "addRules", "behavior": "allow", "destination": "user", "rules": [{"toolName": "Bash", "ruleContent": "git push origin main"}]},
+    {"type": "addRules", "behavior": "allow", "destination": "user", "rules": [{"toolName": "Bash", "ruleContent": "git push --force"}]},
+    {"type": "addRules", "behavior": "allow", "destination": "user", "rules": [{"toolName": "Bash", "ruleContent": "git push --set-upstream origin main"}]},
+    {"type": "addRules", "behavior": "allow", "destination": "user", "rules": [{"toolName": "Bash", "ruleContent": ""}]}
+  ]
+}

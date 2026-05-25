@@ -1,0 +1,4 @@
+{
+  "hook_event_name": "PostCompact",
+  "compact_summary": "Compacted 150 messages to maintain context window."
+}

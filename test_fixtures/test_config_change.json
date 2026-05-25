@@ -1,0 +1,5 @@
+{
+  "hook_event_name": "ConfigChange",
+  "hook_event_type": "skills",
+  "description": "Settings changed (skills)"
+}

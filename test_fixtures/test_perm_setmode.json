@@ -1,0 +1,8 @@
+{
+  "hook_event_name": "PermissionRequest",
+  "tool_name": "Bash",
+  "permission_suggestions": [
+    {"type": "setMode", "behavior": "allow", "mode": "acceptEdits"},
+    {"type": "addDirectories", "behavior": "allow", "destination": "project", "directories": ["/src", "/tests", "/docs"]}
+  ]
+}

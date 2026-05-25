@@ -1,0 +1,5 @@
+{
+  "hook_event_name": "Notification",
+  "hook_event_type": "elicitation_dialog",
+  "message": "An MCP server needs your input"
+}
