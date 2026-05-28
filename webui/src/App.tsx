@@ -377,7 +377,7 @@ function About() {
           <img src={iconBase64} alt="" className="w-10 h-10" />
           <div>
             <h2 className="text-xl font-bold">Claude Code Hooks Notifier</h2>
-            <p className="text-sm text-muted-foreground">{t("about.version", "1.13.0")}</p>
+            <p className="text-sm text-muted-foreground">{t("about.version", "1.13.1")}</p>
           </div>
         </div>
         <p className="text-sm text-muted-foreground">{t("about.tech_stack")}</p>

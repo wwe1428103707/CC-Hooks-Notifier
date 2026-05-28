@@ -362,7 +362,7 @@ internal static class TrayMode
     {
         ToastService.ShowBalloon(
             I18n.Get("about.title"),
-            I18n.Get("about.version", "1.13.0"));
+            I18n.Get("about.version", "1.13.1"));
     }
 
     /// <summary>Rebuild the entire menu after language switch.</summary>

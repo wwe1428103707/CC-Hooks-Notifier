@@ -134,16 +134,7 @@ sealed class Program
     {
         var tool = data.ToolName ?? "Unknown";
 
-        var detailLines = new List<string>();
-        if (data.ToolInput != null)
-        {
-            foreach (var kv in data.ToolInput)
-            {
-                if (string.Equals(kv.Key, "description", StringComparison.OrdinalIgnoreCase))
-                    continue;
-                detailLines.Add($"{kv.Key}: {kv.Value}");
-            }
-        }
+        var detailText = FormatDetailText(data);
 
         var suggestions = new List<JsonElement>();
         if (data.PermissionSuggestions != null)
@@ -151,14 +142,14 @@ sealed class Program
                 suggestions.Add(s);
 
         var hasSuggestions = suggestions.Count > 0;
-        var detailText = detailLines.Count > 0 ? string.Join("\r\n", detailLines) : "(no details)";
+        var detailLines = detailText.Split('\n').Length;
         var hasDetails = detailText != "(no details)";
 
         // ── Layout constants ────────────────────────────────────────
         const int W = 800;
         const int pad = 28;
         var headerH = 64;
-        var detailsH = hasDetails ? Math.Min(140, 20 + detailLines.Count * 20) : 0;
+        var detailsH = hasDetails ? Math.Min(180, 30 + detailLines * 22) : 0;
         var cardH = 52;
         var optionsGapY = 6;
         var optionsHeaderH = hasSuggestions ? 26 : 0;
@@ -518,6 +509,66 @@ sealed class Program
     }
 
     static string EscapeJson(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n");
+
+    /// <summary>Format tool_input as human-readable text. Handles AskUserQuestion questions specially.</summary>
+    static string FormatDetailText(HookData data)
+    {
+        if (data.ToolInput == null || data.ToolInput.Count == 0)
+            return "(no details)";
+
+        var lines = new List<string>();
+
+        // ── AskUserQuestion: extract questions + options ──────────
+        if (data.ToolName == "AskUserQuestion" &&
+            data.ToolInput.TryGetValue("questions", out var qArr) &&
+            qArr.ValueKind == JsonValueKind.Array)
+        {
+            int qi = 1;
+            foreach (var q in qArr.EnumerateArray())
+            {
+                var question = q.TryGetProperty("question", out var qn) ? qn.GetString() ?? "" : "";
+                var header = q.TryGetProperty("header", out var hd) ? hd.GetString() ?? "" : "";
+                var multi = q.TryGetProperty("multiSelect", out var ms) && ms.GetBoolean();
+
+                lines.Add(string.IsNullOrEmpty(header)
+                    ? $"Question {qi}: {question}"
+                    : $"[{header}] {question}");
+                if (multi) lines.Add("  (multiple choices allowed)");
+
+                if (q.TryGetProperty("options", out var opts) && opts.ValueKind == JsonValueKind.Array)
+                {
+                    char label = 'A';
+                    foreach (var opt in opts.EnumerateArray())
+                    {
+                        var optLabel = opt.TryGetProperty("label", out var ol) ? ol.GetString() ?? "" : "";
+                        var optDesc = opt.TryGetProperty("description", out var od) ? od.GetString() ?? "" : "";
+                        var display = string.IsNullOrEmpty(optLabel) ? $"{label}" : optLabel;
+                        lines.Add(string.IsNullOrEmpty(optDesc)
+                            ? $"  {display}"
+                            : $"  {display} — {optDesc}");
+                        label++;
+                    }
+                }
+                qi++;
+            }
+        }
+        else
+        {
+            // ── Other tools: show all tool_input keys (skip description) ──
+            foreach (var kv in data.ToolInput)
+            {
+                if (string.Equals(kv.Key, "description", StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (kv.Key == "questions") continue; // handled above
+                var val = kv.Value.ValueKind == JsonValueKind.String
+                    ? kv.Value.GetString() ?? ""
+                    : kv.Value.GetRawText();
+                lines.Add($"{kv.Key}: {Truncate(val, 300)}");
+            }
+        }
+
+        return lines.Count > 0 ? string.Join("\r\n", lines) : "(no details)";
+    }
 
     static void ShowToast(HookData data)
     {
